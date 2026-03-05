@@ -1,6 +1,6 @@
 // ==========================================
 // STATE MANAGEMENT & SETTINGS
-// ==========================================
+// ==========================================reader.onload
 let templates = [];
 // Ambil pengaturan admin dari perangkat lokal (Token tidak boleh di-hardcode demi keamanan)
 let adminSettings = JSON.parse(localStorage.getItem('pb_settings')) || { 
@@ -105,11 +105,16 @@ document.getElementById('tpl-file').addEventListener('change', (e) => {
     reader.onload = (event) => {
         adminImg.src = event.target.result;
         adminImg.onload = () => {
-            // Skala kanvas untuk UI (Maks lebar 800px)
-            const scale = Math.min(800 / adminImg.width, 1);
+            // DAPATKAN LEBAR CONTAINER SAAT INI
+            const containerWidth = document.getElementById('admin-canvas-container').clientWidth - 40; 
+            
+            // SKALA DINAMIS (Maksimal selebar container, atau 1 jika gambar lebih kecil)
+            const scale = Math.min(containerWidth / adminImg.width, 1);
+            
             adminCanvas.width = adminImg.width * scale;
             adminCanvas.height = adminImg.height * scale;
-            adminCanvas.dataset.scale = scale;
+            adminCanvas.dataset.scale = scale; // Simpan skala untuk kalkulasi slot
+            
             drawAdminCanvas();
             adminSlots = [];
             updateSlotList();
