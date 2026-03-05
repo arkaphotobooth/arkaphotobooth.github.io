@@ -606,3 +606,33 @@ document.getElementById('btn-download').addEventListener('click', () => {
         alert("Upload gagal: Google Drive URL belum diatur di Admin Panel.");
     }
 });
+// ==========================================
+// 11. KEMBALI KE HOME (NEW SESSION)
+// ==========================================
+document.getElementById('btn-home').addEventListener('click', () => {
+    // 1. Kosongkan memori foto sesi sebelumnya
+    session.photos = [];
+    session.slotsAssigned = [];
+    session.template = null;
+
+    // 2. Bersihkan Gallery UI
+    document.getElementById('session-gallery').innerHTML = '';
+    document.getElementById('picker-gallery').innerHTML = '';
+    
+    // 3. Reset Kotak QR Code ke kondisi awal
+    const qrContainer = document.getElementById('qr-container');
+    const qrImage = document.getElementById('qr-image');
+    const qrText = document.getElementById('qr-status-text');
+    const btnDownload = document.getElementById('btn-download');
+    
+    qrContainer.classList.add('hidden');
+    qrImage.style.display = 'none';
+    qrImage.src = '';
+    qrText.innerText = "Menunggu proses...";
+    
+    btnDownload.innerText = "UPLOAD & GET QR";
+    btnDownload.disabled = false;
+
+    // 4. Kembali ke halaman utama
+    showScreen('start-screen');
+});
