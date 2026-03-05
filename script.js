@@ -83,6 +83,12 @@ document.getElementById('btn-admin-close').addEventListener('click', () => {
     showScreen('start-screen');
 });
 
+// Save Drive URL
+document.getElementById('btn-save-drive').addEventListener('click', () => {
+    adminSettings.driveUploadUrl = document.getElementById('drive-url').value;
+    localStorage.setItem('pb_settings', JSON.stringify(adminSettings));
+    alert('Drive Settings Saved!');
+});
 
 // Template Builder Logic
 let adminImg = new Image();
