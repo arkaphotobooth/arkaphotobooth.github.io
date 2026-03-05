@@ -33,4 +33,91 @@
         <div class="admin-layout">
             <details class="admin-settings-accordion">
                 <summary>⚙️ System Settings (Google Drive & GitHub) - <i>Klik untuk Expand</i></summary>
-                <div class="admin-panel accordion-content
+                <div class="admin-panel accordion-content">
+                    <label>Google Drive Upload URL</label>
+                    <input type="text" id="drive-url" placeholder="https://script.google.com/macros/s/.../exec">
+                    
+                    <hr style="margin: 15px 0; border: 0; border-top: 1px solid #ddd;">
+                    
+                    <label>GitHub "Username/Repo" (Misal: budi/photobooth)</label>
+                    <input type="text" id="github-repo" placeholder="username/repository">
+                    
+                    <label>GitHub Personal Access Token (PAT)</label>
+                    <input type="password" id="github-token" placeholder="ghp_xxxxxxxxxxxxxxxxx">
+                    
+                    <button id="btn-save-settings" class="btn-small primary" style="margin-top: 10px;">Save All Settings</button>
+                </div>
+            </details>
+
+            <div class="admin-panel template-panel">
+                <h3>Create New Template</h3>
+                <div class="template-controls">
+                    <input type="text" id="tpl-name" placeholder="Template Name (e.g., Wedding Frame)">
+                    <input type="file" id="tpl-file" accept="image/png">
+                </div>
+                <p class="help-text">1. Upload Frame PNG (Transparan) | 2. Sentuh & Tarik (Drag) di atas gambar untuk membuat Slot Foto.</p>
+                
+                <div class="canvas-container" id="admin-canvas-container">
+                    <canvas id="admin-canvas"></canvas>
+                </div>
+                
+                <ul id="slot-list" class="horizontal-list"></ul>
+                
+                <div class="admin-actions">
+                    <button id="btn-save-tpl" class="btn-large primary">Save & Push Template</button>
+                    <button id="btn-reset-tpl" class="btn-small danger">Reset All Templates</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="session-screen" class="screen">
+        <div class="session-header">
+            <div id="timer">05:00</div>
+            <button id="btn-end-session" class="btn-small danger">End Session Early</button>
+        </div>
+        <div class="camera-container">
+            <video id="camera-feed" autoplay playsinline></video>
+            <div id="countdown-overlay"></div>
+        </div>
+        <div class="controls">
+            <button id="btn-take-photo" class="btn-large primary">TAKE PHOTO</button>
+        </div>
+        <div class="gallery-strip" id="session-gallery">
+            </div>
+    </div>
+
+    <div id="assignment-screen" class="screen">
+        <div class="assignment-header">
+            <h2>Assign Your Photos</h2>
+            <p>Sentuh foto di sebelah kiri, lalu sentuh slot kosong di sebelah kanan.</p>
+        </div>
+        <div class="assignment-layout">
+            <div class="photo-picker" id="picker-gallery">
+                </div>
+            <div class="frame-preview-container">
+                <div id="assignment-frame">
+                    <img id="assign-frame-img" src="" alt="Frame">
+                    <div id="assign-slots-container"></div>
+                </div>
+            </div>
+        </div>
+        <div class="controls">
+            <button id="btn-generate" class="btn-large primary">GENERATE PHOTOSTRIP</button>
+        </div>
+    </div>
+
+    <div id="preview-screen" class="screen">
+        <h2>Your Photostrip</h2>
+        <div class="preview-container">
+            <canvas id="final-canvas"></canvas>
+        </div>
+        <div class="controls action-buttons">
+            <button id="btn-retake" class="btn-large secondary">Retake All</button>
+            <button id="btn-download" class="btn-large primary">DOWNLOAD & UPLOAD</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
