@@ -1,93 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Arka PhotoBooth</title>
-
-<link rel="stylesheet" href="style.css">
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Professional Web Photobooth</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-<section id="boothPage">
+    <div id="start-screen" class="screen active">
+        <button id="btn-admin-login" class="btn-small subtle-btn">Admin Panel</button>
+        <div class="hero">
+            <h1 class="title">PHOTO BOOTH</h1>
+            <p class="subtitle">Capture Your Moment</p>
+            
+            <div class="template-selector">
+                <label for="template-select">Choose Frame:</label>
+                <select id="template-select"></select>
+            </div>
 
-<header class="topbar">
+            <button id="btn-start" class="btn-large primary">START SESSION</button>
+        </div>
+    </div>
 
-<h2 class="logo">Arka PhotoBooth</h2>
+    <div id="admin-screen" class="screen">
+        <div class="admin-header">
+            <h2>Admin Dashboard</h2>
+            <button id="btn-admin-close" class="btn-small">Back to Home</button>
+        </div>
+        
+        <div class="admin-grid">
+            <div class="admin-panel">
+                <h3>Google Drive Settings</h3>
+                <input type="text" id="drive-url" placeholder="https://script.google.com/macros/s/.../exec">
+                <button id="btn-save-drive" class="btn-small primary">Save URL</button>
+            </div>
 
-<div class="sessionInfo">
-<span id="photoCount">0 / 4 Photos</span>
-</div>
+            <div class="admin-panel">
+                <h3>Create New Template</h3>
+                <input type="text" id="tpl-name" placeholder="Template Name (e.g., Wedding Frame)">
+                <input type="file" id="tpl-file" accept="image/png">
+                <p class="help-text">1. Upload Frame PNG (Transparan)<br>2. Klik & Drag di atas gambar untuk membuat Slot Foto.</p>
+                <div class="canvas-container">
+                    <canvas id="admin-canvas"></canvas>
+                </div>
+                <ul id="slot-list"></ul>
+                <button id="btn-save-tpl" class="btn-small primary">Save Template</button>
+                <button id="btn-reset-tpl" class="btn-small danger">Reset All Templates</button>
+            </div>
+        </div>
+    </div>
 
-</header>
+    <div id="session-screen" class="screen">
+        <div class="session-header">
+            <div id="timer">05:00</div>
+            <button id="btn-end-session" class="btn-small danger">End Session Early</button>
+        </div>
+        <div class="camera-container">
+            <video id="camera-feed" autoplay playsinline></video>
+            <div id="countdown-overlay"></div>
+        </div>
+        <div class="controls">
+            <button id="btn-take-photo" class="btn-large primary">TAKE PHOTO</button>
+        </div>
+        <div class="gallery-strip" id="session-gallery">
+            </div>
+    </div>
 
+    <div id="assignment-screen" class="screen">
+        <div class="assignment-header">
+            <h2>Assign Your Photos</h2>
+            <p>Tap a photo, then tap a slot to place it.</p>
+        </div>
+        <div class="assignment-layout">
+            <div class="photo-picker" id="picker-gallery">
+                </div>
+            <div class="frame-preview-container">
+                <div id="assignment-frame">
+                    <img id="assign-frame-img" src="" alt="Frame">
+                    <div id="assign-slots-container"></div>
+                </div>
+            </div>
+        </div>
+        <div class="controls">
+            <button id="btn-generate" class="btn-large primary">GENERATE PHOTOSTRIP</button>
+        </div>
+    </div>
 
-<div class="boothLayout">
+    <div id="preview-screen" class="screen">
+        <h2>Your Photostrip</h2>
+        <div class="preview-container">
+            <canvas id="final-canvas"></canvas>
+        </div>
+        <div class="controls action-buttons">
+            <button id="btn-retake" class="btn-large secondary">Retake All</button>
+            <button id="btn-download" class="btn-large primary">DOWNLOAD & UPLOAD</button>
+        </div>
+    </div>
 
-<!-- CAMERA -->
-
-<div class="cameraArea">
-
-<video id="video" autoplay playsinline></video>
-
-<div class="gridOverlay"></div>
-
-<div id="countdown"></div>
-
-<div class="flash"></div>
-
-<div class="cameraControls">
-
-<button onclick="retakeAll()">↻</button>
-
-<button class="captureBtn" onclick="startCountdown()"></button>
-
-</div>
-
-</div>
-
-
-<!-- PREVIEW -->
-
-<div class="previewPanel">
-
-<canvas id="previewCanvas" width="300" height="900"></canvas>
-
-<div class="frameSelector">
-
-<p>Select Frame</p>
-
-<div class="frames">
-
-<img src="frames/frame1.png" class="frameOption active">
-<img src="frames/frame2.png" class="frameOption">
-<img src="frames/frame3.png" class="frameOption">
-
-</div>
-
-</div>
-
-<button class="downloadBtn" onclick="generateStrip()">
-Download Strip
-</button>
-
-</div>
-
-</div>
-
-<canvas id="canvas" width="1200" height="3600" style="display:none"></canvas>
-
-<a id="downloadLink" download="photostrip.png"></a>
-
-</section>
-
-<script src="script.js"></script>
-
+    <script src="script.js"></script>
 </body>
-
 </html>
