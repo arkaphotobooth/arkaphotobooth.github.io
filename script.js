@@ -542,24 +542,33 @@ document.getElementById('btn-retake').addEventListener('click', () => {
 });
 
 // ==========================================
-// 10. DOWNLOAD & UPLOAD TO DRIVE
+// 10. DOWNLOAD, UPLOAD & QR CODE GENERATION
 // ==========================================
 document.getElementById('btn-download').addEventListener('click', () => {
     const canvas = document.getElementById('final-canvas');
     const dataURL = canvas.toDataURL("image/png");
     const filename = "Photobooth_" + Date.now() + ".png";
 
-    // Download Lokal
+    // 1. Download Lokal ke Tablet (sebagai backup admin)
     const link = document.createElement('a');
     link.download = filename;
     link.href = dataURL;
     link.click();
 
-    // Upload ke Google Drive
+    // 2. Proses Upload dan Generate QR
     if(adminSettings.driveUploadUrl) {
         const btn = document.getElementById('btn-download');
+        const qrContainer = document.getElementById('qr-container');
+        const qrImage = document.getElementById('qr-image');
+        const qrText = document.getElementById('qr-status-text');
+
         btn.innerText = "UPLOADING...";
         btn.disabled = true;
+        
+        // Tampilkan kotak QR dengan status loading
+        qrContainer.classList.remove('hidden');
+        qrImage.style.display = 'none';
+        qrText.innerText = "⏳ Sedang mengupload foto...";
 
         const base64Data = dataURL.replace(/^data:image\/png;base64,/, "");
 
@@ -570,17 +579,30 @@ document.getElementById('btn-download').addEventListener('click', () => {
                 image: base64Data
             })
         })
-        .then(response => response.text())
+        .then(response => response.json()) // BACA RESPON SEBAGAI JSON
         .then(result => {
-            alert("Download & Upload Drive Berhasil!");
-            btn.innerText = "DOWNLOAD & UPLOAD";
-            btn.disabled = false;
+            if(result.status === "success" && result.url) {
+                // Gunakan API publik untuk mengubah URL Drive menjadi Gambar QR Code
+                const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(result.url)}`;
+                
+                qrImage.src = qrApiUrl;
+                qrImage.onload = () => {
+                    qrImage.style.display = 'block';
+                    qrText.innerText = "✅ Scan menggunakan kamera HP!";
+                };
+                
+                btn.innerText = "UPLOAD SELESAI";
+            } else {
+                throw new Error("Gagal mendapatkan link dari Google Drive.");
+            }
         })
         .catch(error => {
             console.error('Upload error:', error);
-            alert("Berhasil didownload, tapi gagal upload ke Google Drive.");
-            btn.innerText = "DOWNLOAD & UPLOAD";
+            qrText.innerText = "❌ Gagal membuat QR. Cek koneksi internet.";
+            btn.innerText = "COBA LAGI";
             btn.disabled = false;
         });
+    } else {
+        alert("Upload gagal: Google Drive URL belum diatur di Admin Panel.");
     }
 });
