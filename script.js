@@ -101,24 +101,44 @@ const actx = adminCanvas.getContext('2d');
 document.getElementById('tpl-file').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if(!file) return;
+    
+    // Pastikan file adalah gambar
+    if(!file.type.match('image.*')) {
+        alert("Mohon upload file gambar (PNG).");
+        return;
+    }
+
     const reader = new FileReader();
     reader.onload = (event) => {
-        adminImg.src = event.target.result;
+        // Pindahkan adminImg.onload ke SEBELUM adminImg.src diisi
+        // Ini praktik terbaik agar event tidak terlewat
         adminImg.onload = () => {
-            // DAPATKAN LEBAR CONTAINER SAAT INI
-            const containerWidth = document.getElementById('admin-canvas-container').clientWidth - 40; 
+            const container = document.getElementById('admin-canvas-container');
+            let containerWidth = container.clientWidth;
             
-            // SKALA DINAMIS (Maksimal selebar container, atau 1 jika gambar lebih kecil)
+            // Failsafe: Jika lebar container gagal terbaca (0), gunakan 80% lebar layar tablet
+            if (!containerWidth || containerWidth < 50) {
+                containerWidth = window.innerWidth * 0.8; 
+            } else {
+                containerWidth = containerWidth - 40; // Kurangi padding CSS
+            }
+            
+            // Hitung skala agar gambar pas di layar tanpa pecah
             const scale = Math.min(containerWidth / adminImg.width, 1);
             
+            // Set ukuran canvas
             adminCanvas.width = adminImg.width * scale;
             adminCanvas.height = adminImg.height * scale;
-            adminCanvas.dataset.scale = scale; // Simpan skala untuk kalkulasi slot
+            adminCanvas.dataset.scale = scale;
             
+            // Render gambar ke canvas
             drawAdminCanvas();
             adminSlots = [];
             updateSlotList();
-        }
+        };
+        
+        // Mulai muat gambar
+        adminImg.src = event.target.result;
     };
     reader.readAsDataURL(file);
 });
