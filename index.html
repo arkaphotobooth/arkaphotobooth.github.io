@@ -107,14 +107,24 @@
         </div>
     </div>
 
-    <div id="preview-screen" class="screen">
+   <div id="preview-screen" class="screen">
         <h2>Your Photostrip</h2>
-        <div class="preview-container">
-            <canvas id="final-canvas"></canvas>
+        
+        <div class="preview-layout">
+            <div class="preview-container">
+                <canvas id="final-canvas"></canvas>
+            </div>
+            
+            <div id="qr-container" class="qr-box hidden">
+                <h3>Scan to Download</h3>
+                <img id="qr-image" src="" alt="QR Code" style="display: none;">
+                <p id="qr-status-text">Menunggu proses...</p>
+            </div>
         </div>
+        
         <div class="controls action-buttons">
             <button id="btn-retake" class="btn-large secondary">Retake All</button>
-            <button id="btn-download" class="btn-large primary">DOWNLOAD & UPLOAD</button>
+            <button id="btn-download" class="btn-large primary">UPLOAD & GET QR</button>
         </div>
     </div>
 
