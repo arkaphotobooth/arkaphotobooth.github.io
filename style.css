@@ -17,24 +17,29 @@
 body {
     background-color: var(--beige);
     color: var(--dark-text);
-    overflow: hidden; /* Mencegah scroll di tablet */
+    /* Mengizinkan scroll hanya jika konten melebihi layar */
+    overflow-y: auto; 
+    overflow-x: hidden;
 }
 
 .screen {
     display: none;
     width: 100vw;
-    height: 100vh;
+    min-height: 100vh;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     position: relative;
+    padding: 20px 0;
 }
 
 .screen.active {
     display: flex;
 }
 
-/* BUTTONS */
+/* ========================================== */
+/* BUTTONS & INPUTS                           */
+/* ========================================== */
 button {
     border: none;
     border-radius: 50px;
@@ -50,78 +55,47 @@ button:active { transform: scale(0.95); }
 .danger { background-color: var(--danger); color: white; }
 .subtle-btn { position: absolute; top: 20px; right: 20px; background: transparent; opacity: 0.5; }
 
-/* START SCREEN */
+input[type="text"], input[type="password"] {
+    width: 100%; padding: 12px; margin: 8px 0 15px 0; 
+    border: 1px solid #ccc; border-radius: 8px; font-size: 1rem;
+}
+
+/* ========================================== */
+/* START SCREEN                               */
+/* ========================================== */
 .hero { text-align: center; }
 .title { font-size: 5rem; font-weight: 800; color: var(--soft-pink); text-shadow: 2px 2px 0px rgba(0,0,0,0.1); margin-bottom: 0; line-height: 1; }
 .subtitle { font-size: 1.5rem; margin-bottom: 40px; letter-spacing: 2px; }
 .template-selector { margin-bottom: 30px; }
-select { padding: 10px 20px; font-size: 1.2rem; border-radius: 10px; border: 1px solid #ccc; outline: none; }
+select { padding: 12px 20px; font-size: 1.2rem; border-radius: 10px; border: 1px solid #ccc; outline: none; width: 100%; max-width: 400px; }
 
-/* ADMIN SCREEN */
-#admin-screen { justify-content: flex-start; padding: 20px; overflow-y: auto; display: none; }
-#admin-screen.active { display: block; }
+/* ========================================== */
+/* ADMIN SCREEN LAYOUT                        */
+/* ========================================== */
+#admin-screen { justify-content: flex-start; padding: 20px; }
 .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.admin-panel { background: var(--white); padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-.admin-panel input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
-.canvas-container { border: 2px dashed #ccc; margin-bottom: 10px; position: relative; overflow: auto; max-height: 400px; background: #eee;}
-#admin-canvas { cursor: crosshair; display: block;}
-.help-text { font-size: 0.8rem; color: #888; margin-bottom: 10px; }
-/* ADMIN LAYOUT BARU */
 .admin-layout { width: 95%; max-width: 1200px; display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;}
+
+.admin-panel { background: var(--white); padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 .admin-settings-accordion { background: var(--white); border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 .admin-settings-accordion summary { font-weight: 600; cursor: pointer; padding: 15px; background: #eaeaea; border-radius: 10px; outline: none; list-style: none; }
 .admin-settings-accordion summary::-webkit-details-marker { display: none; }
 .accordion-content { padding-top: 15px; border-top: 1px solid #ddd; }
 
 .template-panel { display: flex; flex-direction: column; }
-.template-controls { display: flex; gap: 15px; margin-bottom: 10px; }
-.template-controls input { flex: 1; }
+.template-controls { display: flex; gap: 15px; margin-bottom: 10px; flex-wrap: wrap; }
+.template-controls input { flex: 1; min-width: 250px; }
+.help-text { font-size: 0.85rem; color: #888; margin-bottom: 10px; font-weight: 600; }
 
-/* CANVAS LEBIH BESAR */
-.canvas-container { 
+/* CANVAS ADMIN LEBIH BESAR & TANGGUH */
+#admin-canvas-container { 
     width: 100%;
-    border: 2px dashed #ccc; 
-    margin: 10px 0; 
-    position: relative; 
-    overflow: auto; /* Bisa di-scroll jika gambar sangat panjang */
-    height: 55vh; /* Mengambil 55% dari tinggi layar tablet */
-    background: #eee; 
     display: flex; 
-    justify-content: center; /* Gambar di tengah */
-    align-items: flex-start;
-}
-#admin-canvas { cursor: crosshair; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-
-.horizontal-list { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; padding: 0; list-style: none; }
-.horizontal-list li { background: #ddd; padding: 5px 10px; border-radius: 5px; font-size: 0.9rem; display: flex; align-items: center; gap: 10px; }
-.horizontal-list li button { background: var(--danger); color: white; padding: 2px 8px; font-size: 0.8rem; }
-.admin-actions { display: flex; justify-content: space-between; align-items: center; }
-
-/* SESSION SCREEN */
-.session-header { position: absolute; top: 20px; width: 90%; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
-#timer { font-size: 2rem; font-weight: 800; background: rgba(255,255,255,0.8); padding: 5px 20px; border-radius: 20px; }
-.camera-container { position: relative; width: 60%; max-width: 800px; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2); background: #000; }
-video { width: 100%; display: block; transform: scaleX(-1); }
-#countdown-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 8rem; color: white; font-weight: 800; text-shadow: 0 4px 10px rgba(0,0,0,0.5); pointer-events: none; }
-.controls { margin-top: 20px; }
-.gallery-strip { display: flex; gap: 10px; margin-top: 20px; width: 80%; overflow-x: auto; padding: 10px; }
-.gallery-strip img { height: 80px; border-radius: 10px; border: 3px solid var(--white); }
-
-/* ASSIGNMENT SCREEN */
-.assignment-header { text-align: center; margin-bottom: 10px; }
-.assignment-layout { display: flex; width: 90%; height: 65vh; gap: 20px; }
-.photo-picker { flex: 1; background: var(--white); border-radius: 15px; padding: 15px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; align-content: start; }
-.photo-picker img { width: 100%; border-radius: 8px; cursor: pointer; border: 4px solid transparent; transition: 0.2s; }
-.photo-picker img.selected { border-color: var(--soft-pink); transform: scale(0.95); }
-.frame-preview-container { flex: 1; background: #ddd; border-radius: 15px; display: flex; justify-content: center; align-items: center; overflow: hidden; position: relative; }
-#assignment-frame { position: relative; height: 90%; aspect-ratio: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.2); background: white;}
-#assign-frame-img { height: 100%; width: auto; display: block; position: relative; z-index: 2; pointer-events: none; }
-#assign-slots-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-.slot-target { position: absolute; background: rgba(0,0,0,0.1); border: 2px dashed #888; cursor: pointer; display: flex; justify-content: center; align-items: center; overflow: hidden; }
-.slot-target img { width: 100%; height: 100%; object-fit: cover; }
-.slot-target.active-slot { border-color: var(--soft-pink); background: rgba(255, 209, 220, 0.5); }
-
-/* PREVIEW SCREEN */
-.preview-container { height: 60vh; margin: 20px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-#final-canvas { height: 100%; width: auto; display: block; background: white;}
-.action-buttons { display: flex; gap: 20px; }
+    justify-content: center; 
+    background: #eee; 
+    border: 2px dashed #ccc; 
+    padding: 10px;
+    margin-bottom: 15px;
+    max-height: 60vh; /* Maksimal 60% dari tinggi layar tablet */
+    overflow: auto; /* Bisa di-scroll jika gambar vertikal sangat panjang */
+    border-radius:
