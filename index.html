@@ -32,12 +32,16 @@
         
         <div class="admin-layout">
             <details class="admin-settings-accordion">
-                <summary>⚙️ System Settings (Google Drive & GitHub) - <i>Klik untuk Expand</i></summary>
+                <summary>⚙️ System Settings (Google Drive, GitHub, Timer) - <i>Klik untuk Expand</i></summary>
                 <div class="admin-panel accordion-content">
-                    <label>Google Drive Upload URL</label>
-                    <input type="text" id="drive-url" placeholder="https://script.google.com/macros/s/.../exec">
+                    
+                    <label>Waktu Sesi Foto (dalam Detik) - Default: 300 detik (5 Menit)</label>
+                    <input type="number" id="session-time" placeholder="300" min="10">
                     
                     <hr style="margin: 15px 0; border: 0; border-top: 1px solid #ddd;">
+                    
+                    <label>Google Drive Upload URL</label>
+                    <input type="text" id="drive-url" placeholder="https://script.google.com/macros/s/.../exec">
                     
                     <label>GitHub "Username/Repo" (Misal: budi/photobooth)</label>
                     <input type="text" id="github-repo" placeholder="username/repository">
