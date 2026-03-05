@@ -61,12 +61,40 @@ select { padding: 10px 20px; font-size: 1.2rem; border-radius: 10px; border: 1px
 #admin-screen { justify-content: flex-start; padding: 20px; overflow-y: auto; display: none; }
 #admin-screen.active { display: block; }
 .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.admin-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
 .admin-panel { background: var(--white); padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 .admin-panel input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
 .canvas-container { border: 2px dashed #ccc; margin-bottom: 10px; position: relative; overflow: auto; max-height: 400px; background: #eee;}
 #admin-canvas { cursor: crosshair; display: block;}
 .help-text { font-size: 0.8rem; color: #888; margin-bottom: 10px; }
+/* ADMIN LAYOUT BARU */
+.admin-layout { width: 95%; max-width: 1200px; display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;}
+.admin-settings-accordion { background: var(--white); border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.admin-settings-accordion summary { font-weight: 600; cursor: pointer; padding: 15px; background: #eaeaea; border-radius: 10px; outline: none; list-style: none; }
+.admin-settings-accordion summary::-webkit-details-marker { display: none; }
+.accordion-content { padding-top: 15px; border-top: 1px solid #ddd; }
+
+.template-panel { display: flex; flex-direction: column; }
+.template-controls { display: flex; gap: 15px; margin-bottom: 10px; }
+.template-controls input { flex: 1; }
+
+/* CANVAS LEBIH BESAR */
+.canvas-container { 
+    border: 2px dashed #ccc; 
+    margin: 10px 0; 
+    position: relative; 
+    overflow: auto; /* Bisa di-scroll jika gambar sangat panjang */
+    height: 55vh; /* Mengambil 55% dari tinggi layar tablet */
+    background: #eee; 
+    display: flex; 
+    justify-content: center; /* Gambar di tengah */
+    align-items: flex-start;
+}
+#admin-canvas { cursor: crosshair; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+
+.horizontal-list { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; padding: 0; list-style: none; }
+.horizontal-list li { background: #ddd; padding: 5px 10px; border-radius: 5px; font-size: 0.9rem; display: flex; align-items: center; gap: 10px; }
+.horizontal-list li button { background: var(--danger); color: white; padding: 2px 8px; font-size: 0.8rem; }
+.admin-actions { display: flex; justify-content: space-between; align-items: center; }
 
 /* SESSION SCREEN */
 .session-header { position: absolute; top: 20px; width: 90%; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
