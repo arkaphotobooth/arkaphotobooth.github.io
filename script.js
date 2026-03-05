@@ -630,8 +630,17 @@ document.getElementById('btn-home').addEventListener('click', () => {
     qrImage.src = '';
     qrText.innerText = "Menunggu proses...";
     
-    btnDownload.innerText = "UPLOAD & GET QR";
-    btnDownload.disabled = false;
+    if(qrContainer) {
+        qrContainer.classList.add('hidden');
+        qrImage.style.display = 'none';
+        qrImage.src = '';
+        qrText.innerText = "Menunggu proses...";
+    }
+    
+    if(btnDownload) {
+        btnDownload.innerText = "UPLOAD & GET QR";
+        btnDownload.disabled = false;
+    }
 
     // 4. Kembali ke halaman utama
     showScreen('start-screen');
