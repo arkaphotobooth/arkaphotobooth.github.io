@@ -6,9 +6,9 @@ let templates = [];
 let adminSettings = JSON.parse(localStorage.getItem('pb_settings')) || { 
     driveUploadUrl: "", 
     githubRepo: "", 
-    githubToken: "" 
+    githubToken: "",
+    sessionTime: 300 // Default 300 detik (5 menit)
 };
-
 let session = {
     template: null,
     photos: [], // Array foto base64 yang diambil
@@ -73,18 +73,20 @@ document.getElementById('btn-admin-login').addEventListener('click', () => {
     document.getElementById('drive-url').value = adminSettings.driveUploadUrl || '';
     document.getElementById('github-repo').value = adminSettings.githubRepo || '';
     document.getElementById('github-token').value = adminSettings.githubToken || '';
+    // Tampilkan timer yang tersimpan
+    document.getElementById('session-time').value = adminSettings.sessionTime || 300; 
     showScreen('admin-screen');
 });
 
-document.getElementById('btn-admin-close').addEventListener('click', () => {
-    init();
-    showScreen('start-screen');
-});
+// ... kode tombol close ...
 
 document.getElementById('btn-save-settings').addEventListener('click', () => {
     adminSettings.driveUploadUrl = document.getElementById('drive-url').value;
     adminSettings.githubRepo = document.getElementById('github-repo').value;
     adminSettings.githubToken = document.getElementById('github-token').value;
+    // Simpan angka timer (pastikan diubah jadi angka dengan parseInt)
+    adminSettings.sessionTime = parseInt(document.getElementById('session-time').value) || 300;
+    
     localStorage.setItem('pb_settings', JSON.stringify(adminSettings));
     alert('System Settings Saved!');
 });
@@ -330,7 +332,7 @@ document.getElementById('btn-start').addEventListener('click', async () => {
     session.template = templates[selIndex];
     session.photos = [];
     session.slotsAssigned = new Array(session.template.slots.length).fill(null);
-    session.timeLeft = 300;
+    session.timeLeft = adminSettings.sessionTime || 300;
     
     document.getElementById('session-gallery').innerHTML = '';
     updateTimerDisplay();
