@@ -53,7 +53,16 @@ button:active { transform: scale(0.95); }
 .primary { background-color: var(--soft-pink); color: var(--dark-text); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
 .secondary { background-color: var(--white); color: var(--dark-text); border: 2px solid var(--soft-pink); }
 .danger { background-color: var(--danger); color: white; }
-.subtle-btn { position: absolute; top: 20px; right: 20px; background: transparent; opacity: 0.5; }
+.subtle-btn { 
+    position: absolute; 
+    top: 20px; 
+    right: 20px; 
+    background: rgba(255, 255, 255, 0.8); /* Memberi sedikit warna background agar mudah disentuh */
+    opacity: 0.9; 
+    z-index: 999; /* MEMAKSA TOMBOL BERADA DI PALING DEPAN */
+    padding: 10px 15px;
+    border-radius: 10px;
+}
 
 input[type="text"], input[type="password"] {
     width: 100%; padding: 12px; margin: 8px 0 15px 0; 
