@@ -38,6 +38,20 @@
             </div>
 
             <div class="admin-panel">
+                <h3>System Settings</h3>
+                <label>Google Drive Upload URL</label>
+                <input type="text" id="drive-url" placeholder="https://script.google.com/macros/s/.../exec">
+                
+                <hr style="margin: 15px 0; border: 0; border-top: 1px solid #ddd;">
+                
+                <label>GitHub "Username/Repo" (Misal: budi/photobooth)</label>
+                <input type="text" id="github-repo" placeholder="username/repository">
+                
+                <label>GitHub Personal Access Token (PAT)</label>
+                <input type="password" id="github-token" placeholder="ghp_xxxxxxxxxxxxxxxxx">
+                
+                <button id="btn-save-settings" class="btn-small primary" style="margin-top: 10px;">Save All Settings</button>
+            </div>
                 <h3>Create New Template</h3>
                 <input type="text" id="tpl-name" placeholder="Template Name (e.g., Wedding Frame)">
                 <input type="file" id="tpl-file" accept="image/png">
