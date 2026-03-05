@@ -1,8 +1,13 @@
 // ==========================================
-// STATE MANAGEMENT
+// STATE MANAGEMENT & SETTINGS
 // ==========================================
-let templates = JSON.parse(localStorage.getItem('pb_templates')) || [];
-let adminSettings = JSON.parse(localStorage.getItem('pb_settings')) || { driveUploadUrl: "" };
+let templates = [];
+// Ambil pengaturan admin dari perangkat lokal (Token tidak boleh di-hardcode demi keamanan)
+let adminSettings = JSON.parse(localStorage.getItem('pb_settings')) || { 
+    driveUploadUrl: "", 
+    githubRepo: "", 
+    githubToken: "" 
+};
 
 let session = {
     template: null,
@@ -29,15 +34,31 @@ function showScreen(screenId) {
 }
 
 // ==========================================
-// INITIALIZATION
+// INITIALIZATION (FETCH DARI GITHUB)
 // ==========================================
-function init() {
-    // Populate templates dropdown
+async function init() {
     const select = document.getElementById('template-select');
+    select.innerHTML = '<option value="">Loading templates...</option>';
+    document.getElementById('btn-start').disabled = true;
+
+    try {
+        // Mengambil data dari file templates.json di hosting GitHub Pages
+        // Ditambah Date.now() agar selalu mengambil versi terbaru (bypass cache browser)
+        const response = await fetch('templates.json?t=' + Date.now());
+        if (response.ok) {
+            templates = await response.json();
+        } else {
+            // Fallback ke localStorage jika gagal fetch (misal saat testing di komputer lokal)
+            templates = JSON.parse(localStorage.getItem('pb_templates')) || [];
+        }
+    } catch (error) {
+        console.warn("Gagal fetch dari server, menggunakan data lokal.");
+        templates = JSON.parse(localStorage.getItem('pb_templates')) || [];
+    }
+
     select.innerHTML = '';
     if(templates.length === 0) {
-        select.innerHTML = '<option value="">No templates found. Go to Admin Panel.</option>';
-        document.getElementById('btn-start').disabled = true;
+        select.innerHTML = '<option value="">Belum ada template. Buka Admin Panel.</option>';
     } else {
         templates.forEach((t, index) => {
             const opt = document.createElement('option');
@@ -195,6 +216,113 @@ document.getElementById('btn-reset-tpl').addEventListener('click', () => {
         alert('Templates reset.');
     }
 });
+
+// ==========================================
+// ADMIN SETTINGS SAVE
+// ==========================================
+document.getElementById('btn-admin-login').addEventListener('click', () => {
+    document.getElementById('drive-url').value = adminSettings.driveUploadUrl || '';
+    document.getElementById('github-repo').value = adminSettings.githubRepo || '';
+    document.getElementById('github-token').value = adminSettings.githubToken || '';
+    showScreen('admin-screen');
+});
+
+document.getElementById('btn-save-settings').addEventListener('click', () => {
+    adminSettings.driveUploadUrl = document.getElementById('drive-url').value;
+    adminSettings.githubRepo = document.getElementById('github-repo').value;
+    adminSettings.githubToken = document.getElementById('github-token').value;
+    localStorage.setItem('pb_settings', JSON.stringify(adminSettings));
+    alert('System Settings Saved!');
+});
+
+// ==========================================
+// PUSH TEMPLATE KE GITHUB API
+// ==========================================
+document.getElementById('btn-save-tpl').addEventListener('click', async () => {
+    const name = document.getElementById('tpl-name').value;
+    if(!name || !adminImg.src || adminSlots.length === 0) {
+        alert("Mohon isi nama, upload frame, dan buat minimal 1 slot foto.");
+        return;
+    }
+
+    const newTpl = {
+        name: name,
+        frameData: adminImg.src,
+        canvasWidth: adminImg.width,
+        canvasHeight: adminImg.height,
+        slots: adminSlots
+    };
+    
+    // Tambahkan ke array dan simpan sebagai backup lokal
+    templates.push(newTpl);
+    localStorage.setItem('pb_templates', JSON.stringify(templates));
+    
+    // Proses upload ke GitHub
+    if(!adminSettings.githubRepo || !adminSettings.githubToken) {
+        alert("Template disimpan SECARA LOKAL di perangkat ini. Untuk sinkronisasi, isi Repo & Token GitHub di System Settings.");
+        resetAdminForm();
+        return;
+    }
+
+    const btn = document.getElementById('btn-save-tpl');
+    btn.innerText = "Saving to GitHub...";
+    btn.disabled = true;
+
+    try {
+        const repo = adminSettings.githubRepo; // format: owner/repo
+        const token = adminSettings.githubToken;
+        const path = "templates.json";
+        const apiUrl = `https://api.github.com/repos/${repo}/contents/${path}`;
+
+        // 1. Dapatkan file SHA saat ini (GitHub wajibkan SHA untuk update file)
+        let sha = "";
+        const getRes = await fetch(apiUrl, { headers: { "Authorization": `token ${token}` } });
+        if(getRes.ok) {
+            const fileData = await getRes.json();
+            sha = fileData.sha;
+        }
+
+        // 2. Encode array templates ke Base64 dengan aman untuk format Unicode/Gambar
+        const contentStr = JSON.stringify(templates);
+        // UTF-8 safe base64 encoding
+        const contentBase64 = btoa(new Uint8Array(new TextEncoder().encode(contentStr)).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+
+        // 3. Update file di GitHub
+        const putRes = await fetch(apiUrl, {
+            method: 'PUT',
+            headers: {
+                "Authorization": `token ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                message: `Add new template: ${name}`,
+                content: contentBase64,
+                sha: sha || undefined
+            })
+        });
+
+        if(putRes.ok) {
+            alert('Template berhasil di-push ke GitHub! Perangkat lain akan bisa melihatnya dalam 1-2 menit (menunggu proses deploy GitHub Pages).');
+        } else {
+            const errData = await putRes.json();
+            alert(`Gagal upload ke GitHub: ${errData.message}`);
+        }
+    } catch(err) {
+        console.error(err);
+        alert("Terjadi kesalahan jaringan saat menghubungi GitHub API.");
+    }
+
+    btn.innerText = "Save Template";
+    btn.disabled = false;
+    resetAdminForm();
+});
+
+function resetAdminForm() {
+    document.getElementById('tpl-name').value = '';
+    adminSlots = [];
+    actx.clearRect(0, 0, adminCanvas.width, adminCanvas.height);
+    updateSlotList();
+}
 
 // ==========================================
 // USER SESSION LOGIC
