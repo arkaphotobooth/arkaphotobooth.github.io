@@ -90,8 +90,17 @@ document.getElementById('btn-save-drive').addEventListener('click', () => {
     alert('Drive Settings Saved!');
 });
 
+Tentu. Karena target device Anda adalah tablet dengan layar sentuh (Samsung Tab S9), kita harus melakukan penyesuaian penting di bagian ini.
+
+Jika hanya menggunakan event mouse (mousedown, mousemove, mouseup), sering kali fungsi drag untuk membuat kotak tidak akan merespons saat layar disentuh menggunakan jari atau stylus (S-Pen).
+
+Berikut adalah blok Template Builder Logic yang sudah saya tulis ulang dan saya lengkapi dengan dukungan Touch Event agar lancar digunakan di tablet.
+
+Silakan timpa/ganti blok kode "Template Builder Logic" di script.js Anda dengan kode di bawah ini:
+
+JavaScript
 // ==========================================
-// TEMPLATE BUILDER LOGIC (ADMIN)
+// TEMPLATE BUILDER LOGIC (ADMIN - MOUSE & TOUCH SUPPORT)
 // ==========================================
 let adminImg = new Image();
 let adminSlots = [];
@@ -100,17 +109,12 @@ let startX, startY;
 const adminCanvas = document.getElementById('admin-canvas');
 const actx = adminCanvas.getContext('2d');
 
-// Fungsi Utama untuk Menggambar Frame & Slot
+// 1. Fungsi Menggambar Frame & Slot
 function drawAdminCanvas() {
-    if (!adminImg.src) return; // Jangan gambar jika belum ada gambar
-
-    // Bersihkan canvas sebelum menggambar ulang
+    if (!adminImg.src) return;
     actx.clearRect(0, 0, adminCanvas.width, adminCanvas.height);
-    
-    // Gambar frame
     actx.drawImage(adminImg, 0, 0, adminCanvas.width, adminCanvas.height);
     
-    // Gambar kotak slot berwarna merah
     const scale = parseFloat(adminCanvas.dataset.scale || 1);
     actx.strokeStyle = 'red';
     actx.lineWidth = 3;
@@ -122,7 +126,7 @@ function drawAdminCanvas() {
     });
 }
 
-// Event Saat File Di-upload
+// 2. Event Upload Gambar
 document.getElementById('tpl-file').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if(!file) return;
@@ -135,67 +139,92 @@ document.getElementById('tpl-file').addEventListener('change', (e) => {
     const reader = new FileReader();
     reader.onload = (event) => {
         adminImg.onload = () => {
-            // Failsafe Lebar Layar
             const container = document.getElementById('admin-canvas-container');
             let containerWidth = container ? container.clientWidth : 0;
             
-            // Jika container width masih 0, paksa gunakan 800px (aman untuk tablet)
+            // Failsafe Lebar Layar
             if (containerWidth < 50) {
-                containerWidth = 800; 
+                containerWidth = window.innerWidth * 0.8; 
             } else {
-                containerWidth = containerWidth - 20; // Margin aman
+                containerWidth = containerWidth - 20; 
             }
 
-            // Hitung skala
             const scale = Math.min(containerWidth / adminImg.width, 1);
             
-            // Atur dimensi canvas
             adminCanvas.width = adminImg.width * scale;
             adminCanvas.height = adminImg.height * scale;
             adminCanvas.dataset.scale = scale;
             
-            // Reset slot & gambar
             adminSlots = [];
             updateSlotList();
             drawAdminCanvas();
         };
-        
-        // Pemicu load gambar
         adminImg.src = event.target.result;
     };
     reader.readAsDataURL(file);
 });
 
-// Event Menggambar Kotak (Slot) di Canvas
-adminCanvas.addEventListener('mousedown', (e) => {
-    isDrawing = true;
+// 3. Helper Cerdas untuk membaca Mouse atau Touch
+function getPointerPos(e) {
     const rect = adminCanvas.getBoundingClientRect();
-    startX = e.clientX - rect.left;
-    startY = e.clientY - rect.top;
-});
+    let clientX = e.clientX;
+    let clientY = e.clientY;
 
-adminCanvas.addEventListener('mousemove', (e) => {
+    // Deteksi jika yang digunakan adalah layar sentuh (jari / S-Pen)
+    if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    } else if (e.changedTouches && e.changedTouches.length > 0) {
+        clientX = e.changedTouches[0].clientX;
+        clientY = e.changedTouches[0].clientY;
+    }
+
+    return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+    };
+}
+
+// 4. Logika Mulai Menggambar (Mousedown / Touchstart)
+function startDrawing(e) {
+    e.preventDefault(); // Mencegah layar ikut ke-scroll saat menggambar
+    isDrawing = true;
+    const pos = getPointerPos(e);
+    startX = pos.x;
+    startY = pos.y;
+}
+adminCanvas.addEventListener('mousedown', startDrawing);
+adminCanvas.addEventListener('touchstart', startDrawing, { passive: false });
+
+// 5. Logika Sedang Menarik Garis (Mousemove / Touchmove)
+function drawRect(e) {
     if(!isDrawing) return;
-    const rect = adminCanvas.getBoundingClientRect();
-    const currentX = e.clientX - rect.left;
-    const currentY = e.clientY - rect.top;
+    e.preventDefault();
+    const pos = getPointerPos(e);
+    const currentX = pos.x;
+    const currentY = pos.y;
     
-    drawAdminCanvas(); // Render ulang gambar dasar
-    actx.strokeStyle = 'blue'; // Warna saat proses ditarik
+    drawAdminCanvas(); 
+    actx.strokeStyle = 'blue'; 
     actx.lineWidth = 2;
     actx.strokeRect(startX, startY, currentX - startX, currentY - startY);
-});
+}
+adminCanvas.addEventListener('mousemove', drawRect);
+adminCanvas.addEventListener('touchmove', drawRect, { passive: false });
 
-adminCanvas.addEventListener('mouseup', (e) => {
+// 6. Logika Selesai Menggambar (Mouseup / Touchend)
+function stopDrawing(e) {
     if(!isDrawing) return;
     isDrawing = false;
-    const rect = adminCanvas.getBoundingClientRect();
-    const endX = e.clientX - rect.left;
-    const endY = e.clientY - rect.top;
+    e.preventDefault();
+    
+    const pos = getPointerPos(e);
+    const endX = pos.x;
+    const endY = pos.y;
     
     const scale = parseFloat(adminCanvas.dataset.scale || 1);
     
-    // Simpan koordinat asli (bukan skala) agar resolusi asli tetap terjaga saat di-print
+    // Konversi kembali ke resolusi asli gambar
     const newSlot = {
         x: Math.round(Math.min(startX, endX) / scale),
         y: Math.round(Math.min(startY, endY) / scale),
@@ -203,15 +232,19 @@ adminCanvas.addEventListener('mouseup', (e) => {
         height: Math.round(Math.abs(endY - startY) / scale)
     };
     
-    // Jangan simpan jika kotak terlalu kecil (mencegah klik tanpa sengaja)
+    // Abaikan jika terlalu kecil (hanya ketidaksengajaan klik)
     if(newSlot.width > 20 && newSlot.height > 20) {
         adminSlots.push(newSlot);
         updateSlotList();
     }
     
     drawAdminCanvas();
-});
+}
+adminCanvas.addEventListener('mouseup', stopDrawing);
+adminCanvas.addEventListener('touchend', stopDrawing);
+adminCanvas.addEventListener('touchcancel', stopDrawing);
 
+// 7. Update UI Daftar Slot
 function updateSlotList() {
     const ul = document.getElementById('slot-list');
     ul.innerHTML = '';
