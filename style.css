@@ -79,6 +79,7 @@ select { padding: 10px 20px; font-size: 1.2rem; border-radius: 10px; border: 1px
 
 /* CANVAS LEBIH BESAR */
 .canvas-container { 
+    width: 100%;
     border: 2px dashed #ccc; 
     margin: 10px 0; 
     position: relative; 
