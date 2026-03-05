@@ -90,7 +90,9 @@ document.getElementById('btn-save-drive').addEventListener('click', () => {
     alert('Drive Settings Saved!');
 });
 
-// Template Builder Logic
+// ==========================================
+// TEMPLATE BUILDER LOGIC (ADMIN)
+// ==========================================
 let adminImg = new Image();
 let adminSlots = [];
 let isDrawing = false;
@@ -98,66 +100,73 @@ let startX, startY;
 const adminCanvas = document.getElementById('admin-canvas');
 const actx = adminCanvas.getContext('2d');
 
+// Fungsi Utama untuk Menggambar Frame & Slot
+function drawAdminCanvas() {
+    if (!adminImg.src) return; // Jangan gambar jika belum ada gambar
+
+    // Bersihkan canvas sebelum menggambar ulang
+    actx.clearRect(0, 0, adminCanvas.width, adminCanvas.height);
+    
+    // Gambar frame
+    actx.drawImage(adminImg, 0, 0, adminCanvas.width, adminCanvas.height);
+    
+    // Gambar kotak slot berwarna merah
+    const scale = parseFloat(adminCanvas.dataset.scale || 1);
+    actx.strokeStyle = 'red';
+    actx.lineWidth = 3;
+    
+    adminSlots.forEach(s => {
+        actx.strokeRect(s.x * scale, s.y * scale, s.width * scale, s.height * scale);
+        actx.fillStyle = 'rgba(255, 0, 0, 0.4)';
+        actx.fillRect(s.x * scale, s.y * scale, s.width * scale, s.height * scale);
+    });
+}
+
+// Event Saat File Di-upload
 document.getElementById('tpl-file').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if(!file) return;
-    
-    // Pastikan file adalah gambar
+
     if(!file.type.match('image.*')) {
-        alert("Mohon upload file gambar (PNG).");
+        alert("Pilih file gambar (PNG)!");
         return;
     }
 
     const reader = new FileReader();
     reader.onload = (event) => {
-        // Pindahkan adminImg.onload ke SEBELUM adminImg.src diisi
-        // Ini praktik terbaik agar event tidak terlewat
         adminImg.onload = () => {
+            // Failsafe Lebar Layar
             const container = document.getElementById('admin-canvas-container');
-            let containerWidth = container.clientWidth;
+            let containerWidth = container ? container.clientWidth : 0;
             
-            // Failsafe: Jika lebar container gagal terbaca (0), gunakan 80% lebar layar tablet
-            if (!containerWidth || containerWidth < 50) {
-                containerWidth = window.innerWidth * 0.8; 
+            // Jika container width masih 0, paksa gunakan 800px (aman untuk tablet)
+            if (containerWidth < 50) {
+                containerWidth = 800; 
             } else {
-                containerWidth = containerWidth - 40; // Kurangi padding CSS
+                containerWidth = containerWidth - 20; // Margin aman
             }
-            
-            // Hitung skala agar gambar pas di layar tanpa pecah
+
+            // Hitung skala
             const scale = Math.min(containerWidth / adminImg.width, 1);
             
-            // Set ukuran canvas
+            // Atur dimensi canvas
             adminCanvas.width = adminImg.width * scale;
             adminCanvas.height = adminImg.height * scale;
             adminCanvas.dataset.scale = scale;
             
-            // Render gambar ke canvas
-            drawAdminCanvas();
+            // Reset slot & gambar
             adminSlots = [];
             updateSlotList();
+            drawAdminCanvas();
         };
         
-        // Mulai muat gambar
+        // Pemicu load gambar
         adminImg.src = event.target.result;
     };
     reader.readAsDataURL(file);
 });
 
-function drawAdminCanvas() {
-    actx.clearRect(0, 0, adminCanvas.width, adminCanvas.height);
-    actx.drawImage(adminImg, 0, 0, adminCanvas.width, adminCanvas.height);
-    
-    // Draw existing slots
-    const scale = parseFloat(adminCanvas.dataset.scale);
-    actx.strokeStyle = 'red';
-    actx.lineWidth = 2;
-    adminSlots.forEach(s => {
-        actx.strokeRect(s.x * scale, s.y * scale, s.width * scale, s.height * scale);
-        actx.fillStyle = 'rgba(255,0,0,0.3)';
-        actx.fillRect(s.x * scale, s.y * scale, s.width * scale, s.height * scale);
-    });
-}
-
+// Event Menggambar Kotak (Slot) di Canvas
 adminCanvas.addEventListener('mousedown', (e) => {
     isDrawing = true;
     const rect = adminCanvas.getBoundingClientRect();
@@ -171,8 +180,9 @@ adminCanvas.addEventListener('mousemove', (e) => {
     const currentX = e.clientX - rect.left;
     const currentY = e.clientY - rect.top;
     
-    drawAdminCanvas();
-    actx.strokeStyle = 'blue';
+    drawAdminCanvas(); // Render ulang gambar dasar
+    actx.strokeStyle = 'blue'; // Warna saat proses ditarik
+    actx.lineWidth = 2;
     actx.strokeRect(startX, startY, currentX - startX, currentY - startY);
 });
 
@@ -183,7 +193,9 @@ adminCanvas.addEventListener('mouseup', (e) => {
     const endX = e.clientX - rect.left;
     const endY = e.clientY - rect.top;
     
-    const scale = parseFloat(adminCanvas.dataset.scale);
+    const scale = parseFloat(adminCanvas.dataset.scale || 1);
+    
+    // Simpan koordinat asli (bukan skala) agar resolusi asli tetap terjaga saat di-print
     const newSlot = {
         x: Math.round(Math.min(startX, endX) / scale),
         y: Math.round(Math.min(startY, endY) / scale),
@@ -191,11 +203,13 @@ adminCanvas.addEventListener('mouseup', (e) => {
         height: Math.round(Math.abs(endY - startY) / scale)
     };
     
+    // Jangan simpan jika kotak terlalu kecil (mencegah klik tanpa sengaja)
     if(newSlot.width > 20 && newSlot.height > 20) {
         adminSlots.push(newSlot);
-        drawAdminCanvas();
         updateSlotList();
     }
+    
+    drawAdminCanvas();
 });
 
 function updateSlotList() {
@@ -203,10 +217,16 @@ function updateSlotList() {
     ul.innerHTML = '';
     adminSlots.forEach((s, i) => {
         const li = document.createElement('li');
-        li.innerText = `Slot ${i+1}: ${s.width}x${s.height} px `;
+        li.innerHTML = `<span>Slot ${i+1}</span>`;
+        
         const btn = document.createElement('button');
         btn.innerText = 'X';
-        btn.onclick = () => { adminSlots.splice(i, 1); drawAdminCanvas(); updateSlotList(); };
+        btn.onclick = () => { 
+            adminSlots.splice(i, 1); 
+            drawAdminCanvas(); 
+            updateSlotList(); 
+        };
+        
         li.appendChild(btn);
         ul.appendChild(li);
     });
