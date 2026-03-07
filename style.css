@@ -137,6 +137,31 @@ video { width: 100%; display: block; transform: scaleX(-1); } /* Mirror effect *
 .gallery-strip img { height: 80px; border-radius: 10px; border: 3px solid var(--white); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 
 /* ========================================== */
+/* FILTER CONTROLS                            */
+/* ========================================== */
+.filter-controls { 
+    display: flex; 
+    gap: 15px; 
+    justify-content: center; 
+}
+.btn-filter { 
+    padding: 8px 25px; 
+    border: 3px solid var(--soft-pink); 
+    background: var(--white); 
+    border-radius: 25px; 
+    font-weight: 800; 
+    font-size: 1rem;
+    color: var(--dark-text);
+    cursor: pointer; 
+    transition: all 0.2s ease;
+}
+.btn-filter.active { 
+    background: var(--soft-pink); 
+    transform: scale(1.05);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+/* ========================================== */
 /* ASSIGNMENT SCREEN                          */
 /* ========================================== */
 .assignment-header { text-align: center; margin-bottom: 15px; }
