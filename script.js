@@ -1,248 +1,649 @@
-// 1. STATE & SETTINGS
+// ==========================================
+// 1. STATE MANAGEMENT & SETTINGS
+// ==========================================
 let templates = [];
-let adminSettings = JSON.parse(localStorage.getItem('pb_settings')) || { sessionTime: 300 };
-let session = { template: null, photos: [], slotsAssigned: [], timeLeft: 300, currentFilter: 'none' };
+// Ambil pengaturan admin dari localStorage
+let adminSettings = JSON.parse(localStorage.getItem('pb_settings')) || { 
+    driveUploadUrl: "", 
+    githubRepo: "", 
+    githubToken: "",
+    sessionTime: 300 // Default 300 detik (5 menit)
+};
+let session = {
+    template: null,
+    photos: [], // Array foto base64 yang diambil
+    slotsAssigned: [], // Array mapping slot ke foto
+    timer: null,
+    timeLeft: 300 // 5 menit dalam detik
+};
 
+// ==========================================
+// 2. DOM ELEMENTS & UTILS
+// ==========================================
 const screens = document.querySelectorAll('.screen');
 const video = document.getElementById('camera-feed');
+const countdownOverlay = document.getElementById('countdown-overlay');
 const audioShutter = new Audio('https://www.soundjay.com/camera/camera-shutter-click-03.mp3');
 
-function showScreen(id) {
+function showScreen(screenId) {
     screens.forEach(s => s.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
+    document.getElementById(screenId).classList.add('active');
 }
 
-// 2. INITIALIZATION
+// ==========================================
+// 3. INITIALIZATION (FETCH DARI GITHUB)
+// ==========================================
 async function init() {
     const select = document.getElementById('template-select');
+    select.innerHTML = '<option value="">Loading templates...</option>';
+    document.getElementById('btn-start').disabled = true;
+
     try {
-        const res = await fetch(`templates.json?t=${Date.now()}`);
-        templates = res.ok ? await res.json() : (JSON.parse(localStorage.getItem('pb_templates')) || []);
-    } catch {
+        // Fetch dari GitHub Pages dengan cache-busting
+        const response = await fetch('templates.json?t=' + Date.now());
+        if (response.ok) {
+            templates = await response.json();
+        } else {
+            templates = JSON.parse(localStorage.getItem('pb_templates')) || [];
+        }
+    } catch (error) {
+        console.warn("Gagal fetch dari server, menggunakan data lokal.");
         templates = JSON.parse(localStorage.getItem('pb_templates')) || [];
     }
-    select.innerHTML = templates.map((t, i) => `<option value="${i}">${t.name}</option>`).join('') || '<option>No Template</option>';
-    document.getElementById('btn-start').disabled = templates.length === 0;
+
+    select.innerHTML = '';
+    if(templates.length === 0) {
+        select.innerHTML = '<option value="">Belum ada template. Buka Admin Panel.</option>';
+    } else {
+        templates.forEach((t, index) => {
+            const opt = document.createElement('option');
+            opt.value = index;
+            opt.innerText = t.name;
+            select.appendChild(opt);
+        });
+        document.getElementById('btn-start').disabled = false;
+    }
 }
 init();
 
-// 3. ADMIN LOGIC
-document.getElementById('btn-admin-login').onclick = () => {
-    document.getElementById('session-time').value = adminSettings.sessionTime || 300;
+// ==========================================
+// 4. ADMIN PANEL: SETTINGS
+// ==========================================
+document.getElementById('btn-admin-login').addEventListener('click', () => {
     document.getElementById('drive-url').value = adminSettings.driveUploadUrl || '';
     document.getElementById('github-repo').value = adminSettings.githubRepo || '';
     document.getElementById('github-token').value = adminSettings.githubToken || '';
+    // Tampilkan timer yang tersimpan
+    document.getElementById('session-time').value = adminSettings.sessionTime || 300; 
     showScreen('admin-screen');
-};
+});
 
-document.getElementById('btn-admin-close').onclick = () => { init(); showScreen('start-screen'); };
+// ... kode tombol close ...
 
-document.getElementById('btn-save-settings').onclick = () => {
-    adminSettings = {
-        sessionTime: parseInt(document.getElementById('session-time').value) || 300,
-        driveUploadUrl: document.getElementById('drive-url').value,
-        githubRepo: document.getElementById('github-repo').value,
-        githubToken: document.getElementById('github-token').value
-    };
+document.getElementById('btn-save-settings').addEventListener('click', () => {
+    adminSettings.driveUploadUrl = document.getElementById('drive-url').value;
+    adminSettings.githubRepo = document.getElementById('github-repo').value;
+    adminSettings.githubToken = document.getElementById('github-token').value;
+    // Simpan angka timer (pastikan diubah jadi angka dengan parseInt)
+    adminSettings.sessionTime = parseInt(document.getElementById('session-time').value) || 300;
+    
     localStorage.setItem('pb_settings', JSON.stringify(adminSettings));
-    alert('Settings Saved!');
-};
+    alert('System Settings Saved!');
+});
 
-// 4. TEMPLATE BUILDER
-let adminImg = new Image(), adminSlots = [], isDrawing = false, startX, startY;
-const adminCanvas = document.getElementById('admin-canvas'), actx = adminCanvas.getContext('2d');
-
-document.getElementById('tpl-file').onchange = (e) => {
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-        adminImg.onload = () => {
-            adminCanvas.width = adminImg.width; adminCanvas.height = adminImg.height;
-            adminSlots = []; drawAdminCanvas();
-        };
-        adminImg.src = ev.target.result;
-    };
-    reader.readAsDataURL(e.target.files[0]);
-};
+// ==========================================
+// 5. ADMIN PANEL: TEMPLATE BUILDER (TOUCH & MOUSE)
+// ==========================================
+let adminImg = new Image();
+let adminSlots = [];
+let isDrawing = false;
+let startX, startY;
+const adminCanvas = document.getElementById('admin-canvas');
+const actx = adminCanvas.getContext('2d');
 
 function drawAdminCanvas() {
+    if (!adminImg.src) return;
+    
+    // Canvas menggunakan resolusi murni gambar asli
     actx.clearRect(0, 0, adminCanvas.width, adminCanvas.height);
-    actx.drawImage(adminImg, 0, 0);
-    actx.strokeStyle = 'red'; actx.lineWidth = 5;
+    actx.drawImage(adminImg, 0, 0, adminCanvas.width, adminCanvas.height);
+    
+    // Ketebalan garis disesuaikan resolusi gambar
+    actx.lineWidth = Math.max(adminCanvas.width / 150, 4);
+    actx.strokeStyle = 'red';
+    
     adminSlots.forEach(s => {
         actx.strokeRect(s.x, s.y, s.width, s.height);
-        actx.fillStyle = 'rgba(255,0,0,0.3)'; actx.fillRect(s.x, s.y, s.width, s.height);
+        actx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+        actx.fillRect(s.x, s.y, s.width, s.height);
     });
 }
 
-function getPointer(e) {
+document.getElementById('tpl-file').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+
+    if(!file.type.match('image.*')) {
+        alert("Pilih file gambar (PNG)!");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        adminImg.onload = () => {
+            // Set canvas 100% ukuran asli gambar, biarkan CSS yang mengecilkan tampilannya di layar
+            adminCanvas.width = adminImg.width;
+            adminCanvas.height = adminImg.height;
+            
+            adminSlots = [];
+            updateSlotList();
+            drawAdminCanvas();
+        };
+        adminImg.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+});
+
+// Helper Kalkulasi Koordinat (Resolusi Layar vs Resolusi Asli Canvas)
+function getPointerPos(e) {
     const rect = adminCanvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const scaleX = adminCanvas.width / rect.width, scaleY = adminCanvas.height / rect.height;
-    return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+    let clientX = e.clientX;
+    let clientY = e.clientY;
+
+    if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    } else if (e.changedTouches && e.changedTouches.length > 0) {
+        clientX = e.changedTouches[0].clientX;
+        clientY = e.changedTouches[0].clientY;
+    }
+
+    const scaleX = adminCanvas.width / rect.width;
+    const scaleY = adminCanvas.height / rect.height;
+
+    return {
+        x: Math.round((clientX - rect.left) * scaleX),
+        y: Math.round((clientY - rect.top) * scaleY)
+    };
 }
 
-adminCanvas.onmousedown = adminCanvas.ontouchstart = (e) => {
-    if(!adminImg.src) return; isDrawing = true; const p = getPointer(e); startX = p.x; startY = p.y;
-};
-window.onmousemove = window.ontouchmove = (e) => {
-    if(!isDrawing) return; drawAdminCanvas(); const p = getPointer(e);
-    actx.strokeStyle = 'blue'; actx.strokeRect(startX, startY, p.x - startX, p.y - startY);
-};
-window.onmouseup = window.ontouchend = (e) => {
-    if(!isDrawing) return; isDrawing = false; const p = getPointer(e);
-    const s = { x: Math.min(startX, p.x), y: Math.min(startY, p.y), width: Math.abs(p.x - startX), height: Math.abs(p.y - startY) };
-    if(s.width > 20) adminSlots.push(s); drawAdminCanvas();
-};
+function startDrawing(e) {
+    e.preventDefault();
+    isDrawing = true;
+    const pos = getPointerPos(e);
+    startX = pos.x;
+    startY = pos.y;
+}
+adminCanvas.addEventListener('mousedown', startDrawing);
+adminCanvas.addEventListener('touchstart', startDrawing, { passive: false });
 
-document.getElementById('btn-save-tpl').onclick = async () => {
+function drawRect(e) {
+    if(!isDrawing) return;
+    e.preventDefault();
+    const pos = getPointerPos(e);
+    
+    drawAdminCanvas(); 
+    actx.strokeStyle = 'blue'; 
+    actx.lineWidth = Math.max(adminCanvas.width / 150, 4);
+    actx.strokeRect(startX, startY, pos.x - startX, pos.y - startY);
+}
+adminCanvas.addEventListener('mousemove', drawRect);
+adminCanvas.addEventListener('touchmove', drawRect, { passive: false });
+
+function stopDrawing(e) {
+    if(!isDrawing) return;
+    isDrawing = false;
+    e.preventDefault();
+    
+    const pos = getPointerPos(e);
+    
+    const newSlot = {
+        x: Math.min(startX, pos.x),
+        y: Math.min(startY, pos.y),
+        width: Math.abs(pos.x - startX),
+        height: Math.abs(pos.y - startY)
+    };
+    
+    if(newSlot.width > 50 && newSlot.height > 50) {
+        adminSlots.push(newSlot);
+        updateSlotList();
+    }
+    
+    drawAdminCanvas();
+}
+adminCanvas.addEventListener('mouseup', stopDrawing);
+adminCanvas.addEventListener('touchend', stopDrawing);
+adminCanvas.addEventListener('touchcancel', stopDrawing);
+
+function updateSlotList() {
+    const ul = document.getElementById('slot-list');
+    ul.innerHTML = '';
+    adminSlots.forEach((s, i) => {
+        const li = document.createElement('li');
+        li.innerHTML = `<span>Slot ${i+1}</span>`;
+        const btn = document.createElement('button');
+        btn.innerText = 'X';
+        btn.onclick = () => { adminSlots.splice(i, 1); drawAdminCanvas(); updateSlotList(); };
+        li.appendChild(btn);
+        ul.appendChild(li);
+    });
+}
+
+// ==========================================
+// 6. ADMIN PANEL: PUSH TEMPLATE KE GITHUB
+// ==========================================
+document.getElementById('btn-save-tpl').addEventListener('click', async () => {
     const name = document.getElementById('tpl-name').value;
-    if(!name || adminSlots.length === 0) return alert('Name & Slots required');
-    const newTpl = { name, frameData: adminImg.src, canvasWidth: adminImg.width, canvasHeight: adminImg.height, slots: adminSlots };
+    if(!name || !adminImg.src || adminSlots.length === 0) {
+        alert("Mohon isi nama, upload frame, dan buat minimal 1 slot foto.");
+        return;
+    }
+
+    const newTpl = {
+        name: name,
+        frameData: adminImg.src,
+        canvasWidth: adminImg.width,
+        canvasHeight: adminImg.height,
+        slots: adminSlots
+    };
+    
     templates.push(newTpl);
     localStorage.setItem('pb_templates', JSON.stringify(templates));
     
-    if(adminSettings.githubToken && adminSettings.githubRepo) {
-        const btn = document.getElementById('btn-save-tpl'); btn.innerText = 'Pushing...';
-        try {
-            const url = `https://api.github.com/repos/${adminSettings.githubRepo}/contents/templates.json`;
-            const getFile = await fetch(url, { headers: { Authorization: `token ${adminSettings.githubToken}` } });
-            const sha = getFile.ok ? (await getFile.json()).sha : null;
-            const content = btoa(unescape(encodeURIComponent(JSON.stringify(templates))));
-            await fetch(url, {
-                method: 'PUT',
-                headers: { Authorization: `token ${adminSettings.githubToken}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: 'Update templates', content, sha })
-            });
-            alert('Synced to GitHub!');
-        } catch (e) { alert('GitHub Sync Failed'); }
-        btn.innerText = 'Save & Push Template';
+    if(!adminSettings.githubRepo || !adminSettings.githubToken) {
+        alert("Disimpan SECARA LOKAL. Untuk sinkronisasi, isi Repo & Token GitHub di System Settings.");
+        resetAdminForm();
+        return;
     }
-};
 
-// 5. SESSION LOGIC
-document.getElementById('btn-start').onclick = async () => {
-    session = { template: templates[document.getElementById('template-select').value], photos: [], slotsAssigned: [], timeLeft: adminSettings.sessionTime, currentFilter: 'none' };
-    document.getElementById('session-gallery').innerHTML = '';
-    showScreen('session-screen');
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    video.srcObject = stream;
-    session.interval = setInterval(() => {
-        session.timeLeft--;
-        const m = Math.floor(session.timeLeft/60), s = session.timeLeft%60;
-        document.getElementById('timer').innerText = `${m}:${s.toString().padStart(2,'0')}`;
-        if(session.timeLeft <= 0) endSession();
-    }, 1000);
-};
+    const btn = document.getElementById('btn-save-tpl');
+    btn.innerText = "Saving to GitHub...";
+    btn.disabled = true;
 
-document.querySelectorAll('.btn-filter').forEach(b => b.onclick = (e) => {
-    document.querySelectorAll('.btn-filter').forEach(f => f.classList.remove('active'));
-    e.target.classList.add('active');
-    session.currentFilter = e.target.dataset.filter;
-    video.style.filter = session.currentFilter;
+    try {
+        const repo = adminSettings.githubRepo; 
+        const token = adminSettings.githubToken;
+        const path = "templates.json";
+        const apiUrl = `https://api.github.com/repos/${repo}/contents/${path}`;
+
+        let sha = "";
+        const getRes = await fetch(apiUrl, { headers: { "Authorization": `token ${token}` } });
+        if(getRes.ok) {
+            const fileData = await getRes.json();
+            sha = fileData.sha;
+        }
+
+        const contentStr = JSON.stringify(templates);
+        // UTF-8 safe base64
+        const contentBase64 = btoa(new Uint8Array(new TextEncoder().encode(contentStr)).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+
+        const putRes = await fetch(apiUrl, {
+            method: 'PUT',
+            headers: {
+                "Authorization": `token ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                message: `Add new template: ${name}`,
+                content: contentBase64,
+                sha: sha || undefined
+            })
+        });
+
+        if(putRes.ok) {
+            alert('Template berhasil di-push ke GitHub! Tunggu 1-2 menit untuk update di device lain.');
+        } else {
+            const errData = await putRes.json();
+            alert(`Gagal upload: ${errData.message}`);
+        }
+    } catch(err) {
+        console.error(err);
+        alert("Terjadi kesalahan jaringan.");
+    }
+
+    btn.innerText = "Save & Push Template";
+    btn.disabled = false;
+    resetAdminForm();
 });
 
-document.getElementById('btn-take-photo').onclick = () => {
-    let count = 3; const over = document.getElementById('countdown-overlay');
-    const timer = setInterval(() => {
-        over.innerText = count || '';
-        if(count === 0) {
-            clearInterval(timer); snap();
-        }
-        count--;
-    }, 1000);
-};
+document.getElementById('btn-reset-tpl').addEventListener('click', () => {
+    if(confirm('Hapus semua template lokal? (Tidak menghapus dari GitHub)')) {
+        templates = [];
+        localStorage.removeItem('pb_templates');
+        alert('Templates lokal direset.');
+        init();
+    }
+});
 
-function snap() {
-    audioShutter.play();
+function resetAdminForm() {
+    document.getElementById('tpl-name').value = '';
+    adminSlots = [];
+    actx.clearRect(0, 0, adminCanvas.width, adminCanvas.height);
+    document.getElementById('tpl-file').value = "";
+    adminImg = new Image();
+    updateSlotList();
+}
+
+// ==========================================
+// 7. USER SESSION: KAMERA & TIMER
+// ==========================================
+document.getElementById('btn-start').addEventListener('click', async () => {
+    const selIndex = document.getElementById('template-select').value;
+    session.template = templates[selIndex];
+    session.photos = [];
+    session.slotsAssigned = new Array(session.template.slots.length).fill(null);
+    session.timeLeft = adminSettings.sessionTime || 300;
+    
+    document.getElementById('session-gallery').innerHTML = '';
+    updateTimerDisplay();
+    
+    showScreen('session-screen');
+    
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+        video.srcObject = stream;
+        
+        session.timer = setInterval(() => {
+            session.timeLeft--;
+            updateTimerDisplay();
+            if(session.timeLeft <= 0) {
+                endSession();
+            }
+        }, 1000);
+    } catch (err) {
+        alert("Akses kamera ditolak atau tidak tersedia.");
+        showScreen('start-screen');
+    }
+});
+
+function updateTimerDisplay() {
+    const m = Math.floor(session.timeLeft / 60).toString().padStart(2, '0');
+    const s = (session.timeLeft % 60).toString().padStart(2, '0');
+    document.getElementById('timer').innerText = `${m}:${s}`;
+}
+
+document.getElementById('btn-take-photo').addEventListener('click', () => {
+    const btn = document.getElementById('btn-take-photo');
+    btn.disabled = true;
+    let count = 3;
+    countdownOverlay.innerText = count;
+    
+    const cInt = setInterval(() => {
+        count--;
+        if(count > 0) {
+            countdownOverlay.innerText = count;
+        } else {
+            clearInterval(cInt);
+            countdownOverlay.innerText = '';
+            snapPhoto();
+            btn.disabled = false;
+        }
+    }, 1000);
+});
+
+function snapPhoto() {
+    audioShutter.play().catch(e => console.log('Audio error:', e));
+    
+    countdownOverlay.style.background = 'white';
+    setTimeout(() => { countdownOverlay.style.background = 'transparent'; }, 100);
+
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
-    ctx.translate(canvas.width, 0); ctx.scale(-1, 1);
-    ctx.filter = session.currentFilter;
-    ctx.drawImage(video, 0, 0);
-    const data = canvas.toDataURL('image/jpeg');
-    session.photos.push(data);
-    const img = document.createElement('img'); img.src = data;
+    
+    // Mirror gambar
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    const dataUrl = canvas.toDataURL('image/jpeg');
+    session.photos.push(dataUrl);
+    
+    const img = document.createElement('img');
+    img.src = dataUrl;
     document.getElementById('session-gallery').appendChild(img);
 }
 
-function endSession() {
-    clearInterval(session.interval);
-    if(video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
-    setupAssignment();
-}
-document.getElementById('btn-end-session').onclick = endSession;
+document.getElementById('btn-end-session').addEventListener('click', endSession);
 
-// 6. ASSIGNMENT & GENERATE
-let selectedPhoto = null;
-function setupAssignment() {
+function endSession() {
+    clearInterval(session.timer);
+    const stream = video.srcObject;
+    if(stream) {
+        stream.getTracks().forEach(track => track.stop());
+    }
+    
+    if(session.photos.length === 0) {
+        alert("Kamu belum mengambil foto satupun!");
+        showScreen('start-screen');
+        return;
+    }
+    
+    setupAssignmentScreen();
+}
+
+// ==========================================
+// 8. USER SESSION: ASSIGNMENT (TAP TO ASSIGN)
+// ==========================================
+let selectedPhotoUrl = null;
+
+function setupAssignmentScreen() {
     showScreen('assignment-screen');
     const picker = document.getElementById('picker-gallery');
-    picker.innerHTML = session.photos.map(p => `<img src="${p}" class="pick-img">`).join('');
-    document.querySelectorAll('.pick-img').forEach(img => img.onclick = (e) => {
-        document.querySelectorAll('.pick-img').forEach(i => i.classList.remove('selected'));
-        e.target.classList.add('selected'); selectedPhoto = e.target.src;
+    picker.innerHTML = '';
+    selectedPhotoUrl = null; // Reset pilihan
+    
+    // Render Foto
+    session.photos.forEach(photoUrl => {
+        const img = document.createElement('img');
+        img.src = photoUrl;
+        img.onclick = () => {
+            document.querySelectorAll('.photo-picker img').forEach(el => el.classList.remove('selected'));
+            img.classList.add('selected');
+            selectedPhotoUrl = photoUrl;
+        };
+        picker.appendChild(img);
     });
+
+    // Render Frame & Slots
     const frameImg = document.getElementById('assign-frame-img');
+    const slotsContainer = document.getElementById('assign-slots-container');
+    
     frameImg.src = session.template.frameData;
+    slotsContainer.innerHTML = '';
+    
     frameImg.onload = () => {
-        const ratio = frameImg.clientHeight / session.template.canvasHeight;
-        const container = document.getElementById('assign-slots-container');
-        container.innerHTML = session.template.slots.map((s, i) => `
-            <div class="slot-target" data-i="${i}" style="left:${s.x * ratio}px; top:${s.y * ratio}px; width:${s.width * ratio}px; height:${s.height * ratio}px">Slot ${i+1}</div>
-        `).join('');
-        document.querySelectorAll('.slot-target').forEach(st => st.onclick = (e) => {
-            if(!selectedPhoto) return;
-            const i = e.target.dataset.i; session.slotsAssigned[i] = selectedPhoto;
-            e.target.innerHTML = `<img src="${selectedPhoto}">`;
+        const renderedHeight = frameImg.clientHeight;
+        const nativeHeight = session.template.canvasHeight;
+        const ratio = renderedHeight / nativeHeight;
+
+        session.template.slots.forEach((slot, index) => {
+            const div = document.createElement('div');
+            div.className = 'slot-target';
+            div.style.left = (slot.x * ratio) + 'px';
+            div.style.top = (slot.y * ratio) + 'px';
+            div.style.width = (slot.width * ratio) + 'px';
+            div.style.height = (slot.height * ratio) + 'px';
+            div.innerText = `Slot ${index + 1}`;
+            
+            div.onclick = () => {
+                if(selectedPhotoUrl) {
+                    div.innerHTML = `<img src="${selectedPhotoUrl}">`;
+                    div.classList.add('active-slot');
+                    session.slotsAssigned[index] = selectedPhotoUrl;
+                } else {
+                    alert("Sentuh foto di sebelah kiri dulu, lalu sentuh slot ini.");
+                }
+            };
+            slotsContainer.appendChild(div);
         });
-    };
+    }
 }
 
-document.getElementById('btn-generate').onclick = () => {
-    const t = session.template; const canvas = document.getElementById('final-canvas');
-    canvas.width = t.canvasWidth; canvas.height = t.canvasHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = 'white'; ctx.fillRect(0,0,canvas.width,canvas.height);
-    let loaded = 0;
-    t.slots.forEach((s, i) => {
-        const img = new Image(); img.src = session.slotsAssigned[i];
-        img.onload = () => {
-            const iR = img.width/img.height, sR = s.width/s.height;
-            let sw = img.width, sh = img.height, sx = 0, sy = 0;
-            if(iR > sR) { sw = img.height * sR; sx = (img.width - sw)/2; }
-            else { sh = img.width / sR; sy = (img.height - sh)/2; }
-            ctx.drawImage(img, sx, sy, sw, sh, s.x, s.y, s.width, s.height);
-            if(++loaded === t.slots.length) {
-                const f = new Image(); f.src = t.frameData;
-                f.onload = () => { ctx.drawImage(f, 0, 0); showScreen('preview-screen'); };
-            }
-        };
-    });
-};
-
-// 7. DOWNLOAD & QR
-document.getElementById('btn-download').onclick = async () => {
-    const canvas = document.getElementById('final-canvas');
-    const data = canvas.toDataURL('image/png');
-    const a = document.createElement('a'); a.download = `Photo_${Date.now()}.png`; a.href = data; a.click();
-    
-    if(adminSettings.driveUploadUrl) {
-        const qrBox = document.getElementById('qr-container'); qrBox.classList.remove('hidden');
-        try {
-            const res = await fetch(adminSettings.driveUploadUrl, {
-                method: 'POST',
-                body: JSON.stringify({ filename: `PB_${Date.now()}.png`, image: data.split(',')[1] })
-            });
-            const result = await res.json();
-            if(result.url) {
-                document.getElementById('qr-image').src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(result.url)}`;
-                document.getElementById('qr-status-text').innerText = '✅ Ready to Scan!';
-            }
-        } catch { document.getElementById('qr-status-text').innerText = '❌ Upload Failed'; }
+// ==========================================
+// 9. PHOTOSTRIP GENERATION
+// ==========================================
+document.getElementById('btn-generate').addEventListener('click', () => {
+    if(session.slotsAssigned.includes(null)) {
+        alert("Harap isi semua slot foto sebelum generate!");
+        return;
     }
-};
 
-document.getElementById('btn-home').onclick = () => location.reload();
-document.getElementById('btn-retake').onclick = () => showScreen('start-screen');
+    const tpl = session.template;
+    const canvas = document.getElementById('final-canvas');
+    canvas.width = tpl.canvasWidth;
+    canvas.height = tpl.canvasHeight;
+    const ctx = canvas.getContext('2d');
+    
+    // Background putih
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    let loadedCount = 0;
+    
+    // Gambar foto (Center Crop Logic)
+    tpl.slots.forEach((slot, i) => {
+        const img = new Image();
+        img.onload = () => {
+            const imgRatio = img.width / img.height;
+            const slotRatio = slot.width / slot.height;
+            let sx = 0, sy = 0, sWidth = img.width, sHeight = img.height;
+
+            if (imgRatio > slotRatio) {
+                sWidth = img.height * slotRatio;
+                sx = (img.width - sWidth) / 2;
+            } else {
+                sHeight = img.width / slotRatio;
+                sy = (img.height - sHeight) / 2;
+            }
+
+            ctx.drawImage(img, sx, sy, sWidth, sHeight, slot.x, slot.y, slot.width, slot.height);
+            loadedCount++;
+            checkFinish();
+        };
+        img.src = session.slotsAssigned[i];
+    });
+
+    function checkFinish() {
+        if(loadedCount === tpl.slots.length) {
+            const overlay = new Image();
+            overlay.onload = () => {
+                ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height);
+                showScreen('preview-screen');
+            };
+            overlay.src = tpl.frameData;
+        }
+    }
+});
+
+document.getElementById('btn-retake').addEventListener('click', () => {
+    if(confirm('Yakin ingin membatalkan foto ini dan mengulang?')) {
+        showScreen('start-screen');
+    }
+});
+
+// ==========================================
+// 10. DOWNLOAD, UPLOAD & QR CODE GENERATION
+// ==========================================
+document.getElementById('btn-download').addEventListener('click', () => {
+    const canvas = document.getElementById('final-canvas');
+    const dataURL = canvas.toDataURL("image/png");
+    const filename = "Photobooth_" + Date.now() + ".png";
+
+    // 1. Download Lokal ke Tablet (sebagai backup admin)
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = dataURL;
+    link.click();
+
+    // 2. Proses Upload dan Generate QR
+    if(adminSettings.driveUploadUrl) {
+        const btn = document.getElementById('btn-download');
+        const qrContainer = document.getElementById('qr-container');
+        const qrImage = document.getElementById('qr-image');
+        const qrText = document.getElementById('qr-status-text');
+
+        btn.innerText = "UPLOADING...";
+        btn.disabled = true;
+        
+        // Tampilkan kotak QR dengan status loading
+        qrContainer.classList.remove('hidden');
+        qrImage.style.display = 'none';
+        qrText.innerText = "⏳ Sedang mengupload foto...";
+
+        const base64Data = dataURL.replace(/^data:image\/png;base64,/, "");
+
+        fetch(adminSettings.driveUploadUrl, {
+            method: "POST",
+            body: JSON.stringify({
+                filename: filename,
+                image: base64Data
+            })
+        })
+        .then(response => response.json()) // BACA RESPON SEBAGAI JSON
+        .then(result => {
+            if(result.status === "success" && result.url) {
+                // Gunakan API publik untuk mengubah URL Drive menjadi Gambar QR Code
+                const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(result.url)}`;
+                
+                qrImage.src = qrApiUrl;
+                qrImage.onload = () => {
+                    qrImage.style.display = 'block';
+                    qrText.innerText = "✅ Scan menggunakan kamera HP!";
+                };
+                
+                btn.innerText = "UPLOAD SELESAI";
+            } else {
+                throw new Error("Gagal mendapatkan link dari Google Drive.");
+            }
+        })
+        .catch(error => {
+            console.error('Upload error:', error);
+            qrText.innerText = "❌ Gagal membuat QR. Cek koneksi internet.";
+            btn.innerText = "COBA LAGI";
+            btn.disabled = false;
+        });
+    } else {
+        alert("Upload gagal: Google Drive URL belum diatur di Admin Panel.");
+    }
+});
+// ==========================================
+// 11. KEMBALI KE HOME (NEW SESSION)
+// ==========================================
+document.getElementById('btn-home').addEventListener('click', () => {
+    // 1. Kosongkan memori foto sesi sebelumnya
+    session.photos = [];
+    session.slotsAssigned = [];
+    session.template = null;
+
+    // 2. Bersihkan Gallery UI
+    document.getElementById('session-gallery').innerHTML = '';
+    document.getElementById('picker-gallery').innerHTML = '';
+    
+    // 3. Reset Kotak QR Code ke kondisi awal
+    const qrContainer = document.getElementById('qr-container');
+    const qrImage = document.getElementById('qr-image');
+    const qrText = document.getElementById('qr-status-text');
+    const btnDownload = document.getElementById('btn-download');
+    
+    qrContainer.classList.add('hidden');
+    qrImage.style.display = 'none';
+    qrImage.src = '';
+    qrText.innerText = "Menunggu proses...";
+    
+    if(qrContainer) {
+        qrContainer.classList.add('hidden');
+        qrImage.style.display = 'none';
+        qrImage.src = '';
+        qrText.innerText = "Menunggu proses...";
+    }
+    
+    if(btnDownload) {
+        btnDownload.innerText = "UPLOAD & GET QR";
+        btnDownload.disabled = false;
+    }
+
+    // 4. Kembali ke halaman utama
+    showScreen('start-screen');
+});
