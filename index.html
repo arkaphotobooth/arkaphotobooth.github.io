@@ -32,7 +32,7 @@
         
         <div class="admin-layout">
             <details class="admin-settings-accordion">
-                <summary>⚙️ System Settings (Google Drive, GitHub, Timer) - <i>Klik untuk Expand</i></summary>
+                <summary>⚙️ System Settings (Timer, Drive & GitHub) - <i>Klik untuk Expand</i></summary>
                 <div class="admin-panel accordion-content">
                     
                     <label>Waktu Sesi Foto (dalam Detik) - Default: 300 detik (5 Menit)</label>
@@ -80,13 +80,22 @@
             <div id="timer">05:00</div>
             <button id="btn-end-session" class="btn-small danger">End Session Early</button>
         </div>
+        
+        <div class="filter-controls" style="margin-top: 60px; margin-bottom: 15px; z-index: 10;">
+            <button class="btn-filter active" data-filter="none">Normal</button>
+            <button class="btn-filter" data-filter="grayscale(100%)">B & W</button>
+            <button class="btn-filter" data-filter="sepia(0.8) contrast(1.2) brightness(0.9)">Vintage</button>
+        </div>
+
         <div class="camera-container">
             <video id="camera-feed" autoplay playsinline></video>
             <div id="countdown-overlay"></div>
         </div>
+        
         <div class="controls">
             <button id="btn-take-photo" class="btn-large primary">TAKE PHOTO</button>
         </div>
+        
         <div class="gallery-strip" id="session-gallery">
             </div>
     </div>
@@ -96,6 +105,7 @@
             <h2>Assign Your Photos</h2>
             <p>Sentuh foto di sebelah kiri, lalu sentuh slot kosong di sebelah kanan.</p>
         </div>
+        
         <div class="assignment-layout">
             <div class="photo-picker" id="picker-gallery">
                 </div>
@@ -111,7 +121,7 @@
         </div>
     </div>
 
-   <div id="preview-screen" class="screen">
+    <div id="preview-screen" class="screen">
         <h2>Your Photostrip</h2>
         
         <div class="preview-layout">
@@ -126,12 +136,12 @@
             </div>
         </div>
         
-       <div class="controls action-buttons">
+        <div class="controls action-buttons">
             <button id="btn-retake" class="btn-large secondary">Retake All</button>
             <button id="btn-download" class="btn-large primary">UPLOAD & GET QR</button>
-            
             <button id="btn-home" class="btn-large" style="background-color: var(--dark-text); color: white;">SELESAI</button>
         </div>
+    </div>
 
     <script src="script.js"></script>
 </body>
