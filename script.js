@@ -17,6 +17,7 @@ let session = {
     slotsAssigned: [], 
     timer: null,
     timeLeft: 300 
+    currentFilter: 'none'
 };
 
 // ==========================================
@@ -392,7 +393,14 @@ function snapPhoto() {
     
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
+    // --- TAMBAHAN BARU: TERAPKAN FILTER SEBELUM DIGAMBAR ---
+    ctx.filter = session.currentFilter !== 'none' ? session.currentFilter : 'none';
+    
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Reset kembali ke normal
+    ctx.filter = 'none';
+    // --------------------------------------------------------
     
     const dataUrl = canvas.toDataURL('image/jpeg');
     session.photos.push(dataUrl);
@@ -418,6 +426,24 @@ function endSession() {
     }
     setupAssignmentScreen();
 }
+
+// ==========================================
+// 7.5 LOGIKA FILTER WARNA (LIVE CAMERA PREVIEW)
+// ==========================================
+document.querySelectorAll('.btn-filter').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        // Reset warna tombol
+        document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        
+        // Simpan filter ke memori
+        session.currentFilter = e.target.dataset.filter;
+
+        // Terapkan efek langsung ke layar video kamera
+        const videoFeed = document.getElementById('camera-feed');
+        videoFeed.style.filter = session.currentFilter !== 'none' ? session.currentFilter : 'none';
+    });
+});
 
 // ==========================================
 // 8. USER SESSION: ASSIGNMENT
@@ -602,6 +628,15 @@ document.getElementById('btn-home').addEventListener('click', () => {
     session.photos = [];
     session.slotsAssigned = [];
     session.template = null;
+    // Reset status filter ke awal
+    session.currentFilter = 'none';
+    const videoFeed = document.getElementById('camera-feed');
+    if(videoFeed) videoFeed.style.filter = 'none';
+    
+    // Reset tampilan tombol filter kembali ke Normal
+    document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+    const normalBtn = document.querySelector('.btn-filter[data-filter="none"]');
+    if(normalBtn) normalBtn.classList.add('active');
 
     document.getElementById('session-gallery').innerHTML = '';
     document.getElementById('picker-gallery').innerHTML = '';
