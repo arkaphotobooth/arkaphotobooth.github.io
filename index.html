@@ -78,18 +78,26 @@
     <div id="session-screen" class="screen">
         <div class="session-header">
             <div id="timer">05:00</div>
-            <button id="btn-end-session" class="btn-small danger">End Session Early</button>
+            <button id="btn-end-session" class="btn-small danger">End Early</button>
         </div>
+        
+        <div class="filter-controls">
+            <button class="btn-filter active" data-filter="none">Normal</button>
+            <button class="btn-filter" data-filter="grayscale(100%)">B & W</button>
+            <button class="btn-filter" data-filter="sepia(0.8) contrast(1.2)">Vintage</button>
+        </div>
+        
         <div class="camera-container">
             <video id="camera-feed" autoplay playsinline></video>
             <div id="countdown-overlay"></div>
         </div>
-        <div class="controls">
-            <button id="btn-take-photo" class="btn-large primary">TAKE PHOTO</button>
+        
+        <div class="session-bottom-bar">
+            <button id="btn-take-photo" class="btn-large primary">📸 TAKE PHOTO</button>
+            <div class="gallery-strip" id="session-gallery">
+                </div>
         </div>
-        <div class="gallery-strip" id="session-gallery">
-            </div>
-    </div>
+        </div>
 
     <div id="assignment-screen" class="screen">
         <div class="assignment-header">
