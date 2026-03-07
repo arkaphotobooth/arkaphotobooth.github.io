@@ -3,18 +3,20 @@
 // ==========================================
 let templates = [];
 // Ambil pengaturan admin dari localStorage
-let adminSettings = JSON.parse(localStorage.getItem('pb_settings')) || { 
-    driveUploadUrl: "", 
-    githubRepo: "", 
-    githubToken: "",
-    sessionTime: 300 // Default 300 detik (5 menit)
-};
+let adminSettings = JSON.parse(localStorage.getItem('pb_settings')) || {};
+
+// Failsafe properti
+adminSettings.driveUploadUrl = adminSettings.driveUploadUrl || "";
+adminSettings.githubRepo = adminSettings.githubRepo || "";
+adminSettings.githubToken = adminSettings.githubToken || "";
+adminSettings.sessionTime = adminSettings.sessionTime || 300; 
+
 let session = {
     template: null,
-    photos: [], // Array foto base64 yang diambil
-    slotsAssigned: [], // Array mapping slot ke foto
+    photos: [], 
+    slotsAssigned: [], 
     timer: null,
-    timeLeft: 300 // 5 menit dalam detik
+    timeLeft: 300 
 };
 
 // ==========================================
@@ -31,7 +33,7 @@ function showScreen(screenId) {
 }
 
 // ==========================================
-// 3. INITIALIZATION (FETCH DARI GITHUB)
+// 3. INITIALIZATION
 // ==========================================
 async function init() {
     const select = document.getElementById('template-select');
@@ -39,7 +41,6 @@ async function init() {
     document.getElementById('btn-start').disabled = true;
 
     try {
-        // Fetch dari GitHub Pages dengan cache-busting
         const response = await fetch('templates.json?t=' + Date.now());
         if (response.ok) {
             templates = await response.json();
@@ -67,32 +68,36 @@ async function init() {
 init();
 
 // ==========================================
-// 4. ADMIN PANEL: SETTINGS
+// 4. ADMIN PANEL: SETTINGS & NAVIGATION
 // ==========================================
 document.getElementById('btn-admin-login').addEventListener('click', () => {
-    document.getElementById('drive-url').value = adminSettings.driveUploadUrl || '';
-    document.getElementById('github-repo').value = adminSettings.githubRepo || '';
-    document.getElementById('github-token').value = adminSettings.githubToken || '';
-    // Tampilkan timer yang tersimpan
-    document.getElementById('session-time').value = adminSettings.sessionTime || 300; 
+    document.getElementById('drive-url').value = adminSettings.driveUploadUrl;
+    document.getElementById('github-repo').value = adminSettings.githubRepo;
+    document.getElementById('github-token').value = adminSettings.githubToken;
+    document.getElementById('session-time').value = adminSettings.sessionTime; 
     showScreen('admin-screen');
 });
 
-// ... kode tombol close ...
+// KODE INI YANG SEBELUMNYA KEMUNGKINAN TERHAPUS
+document.getElementById('btn-admin-close').addEventListener('click', () => {
+    init(); // Refresh data template jika ada perubahan
+    showScreen('start-screen'); // Kembali ke menu utama
+});
 
 document.getElementById('btn-save-settings').addEventListener('click', () => {
     adminSettings.driveUploadUrl = document.getElementById('drive-url').value;
     adminSettings.githubRepo = document.getElementById('github-repo').value;
     adminSettings.githubToken = document.getElementById('github-token').value;
-    // Simpan angka timer (pastikan diubah jadi angka dengan parseInt)
-    adminSettings.sessionTime = parseInt(document.getElementById('session-time').value) || 300;
+    
+    let inputTime = parseInt(document.getElementById('session-time').value);
+    adminSettings.sessionTime = isNaN(inputTime) ? 300 : inputTime;
     
     localStorage.setItem('pb_settings', JSON.stringify(adminSettings));
-    alert('System Settings Saved!');
+    alert('System Settings Saved! Waktu sesi diatur ke: ' + adminSettings.sessionTime + ' detik.');
 });
 
 // ==========================================
-// 5. ADMIN PANEL: TEMPLATE BUILDER (TOUCH & MOUSE)
+// 5. ADMIN PANEL: TEMPLATE BUILDER
 // ==========================================
 let adminImg = new Image();
 let adminSlots = [];
@@ -103,12 +108,9 @@ const actx = adminCanvas.getContext('2d');
 
 function drawAdminCanvas() {
     if (!adminImg.src) return;
-    
-    // Canvas menggunakan resolusi murni gambar asli
     actx.clearRect(0, 0, adminCanvas.width, adminCanvas.height);
     actx.drawImage(adminImg, 0, 0, adminCanvas.width, adminCanvas.height);
     
-    // Ketebalan garis disesuaikan resolusi gambar
     actx.lineWidth = Math.max(adminCanvas.width / 150, 4);
     actx.strokeStyle = 'red';
     
@@ -131,10 +133,8 @@ document.getElementById('tpl-file').addEventListener('change', (e) => {
     const reader = new FileReader();
     reader.onload = (event) => {
         adminImg.onload = () => {
-            // Set canvas 100% ukuran asli gambar, biarkan CSS yang mengecilkan tampilannya di layar
             adminCanvas.width = adminImg.width;
             adminCanvas.height = adminImg.height;
-            
             adminSlots = [];
             updateSlotList();
             drawAdminCanvas();
@@ -144,7 +144,6 @@ document.getElementById('tpl-file').addEventListener('change', (e) => {
     reader.readAsDataURL(file);
 });
 
-// Helper Kalkulasi Koordinat (Resolusi Layar vs Resolusi Asli Canvas)
 function getPointerPos(e) {
     const rect = adminCanvas.getBoundingClientRect();
     let clientX = e.clientX;
@@ -196,7 +195,6 @@ function stopDrawing(e) {
     e.preventDefault();
     
     const pos = getPointerPos(e);
-    
     const newSlot = {
         x: Math.min(startX, pos.x),
         y: Math.min(startY, pos.y),
@@ -208,7 +206,6 @@ function stopDrawing(e) {
         adminSlots.push(newSlot);
         updateSlotList();
     }
-    
     drawAdminCanvas();
 }
 adminCanvas.addEventListener('mouseup', stopDrawing);
@@ -274,7 +271,6 @@ document.getElementById('btn-save-tpl').addEventListener('click', async () => {
         }
 
         const contentStr = JSON.stringify(templates);
-        // UTF-8 safe base64
         const contentBase64 = btoa(new Uint8Array(new TextEncoder().encode(contentStr)).reduce((data, byte) => data + String.fromCharCode(byte), ''));
 
         const putRes = await fetch(apiUrl, {
@@ -291,7 +287,7 @@ document.getElementById('btn-save-tpl').addEventListener('click', async () => {
         });
 
         if(putRes.ok) {
-            alert('Template berhasil di-push ke GitHub! Tunggu 1-2 menit untuk update di device lain.');
+            alert('Template berhasil di-push ke GitHub!');
         } else {
             const errData = await putRes.json();
             alert(`Gagal upload: ${errData.message}`);
@@ -332,7 +328,9 @@ document.getElementById('btn-start').addEventListener('click', async () => {
     session.template = templates[selIndex];
     session.photos = [];
     session.slotsAssigned = new Array(session.template.slots.length).fill(null);
-    session.timeLeft = adminSettings.sessionTime || 300;
+    
+    // MENGAMBIL WAKTU DARI SETTING ADMIN
+    session.timeLeft = adminSettings.sessionTime; 
     
     document.getElementById('session-gallery').innerHTML = '';
     updateTimerDisplay();
@@ -392,7 +390,6 @@ function snapPhoto() {
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
     
-    // Mirror gambar
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -419,12 +416,11 @@ function endSession() {
         showScreen('start-screen');
         return;
     }
-    
     setupAssignmentScreen();
 }
 
 // ==========================================
-// 8. USER SESSION: ASSIGNMENT (TAP TO ASSIGN)
+// 8. USER SESSION: ASSIGNMENT
 // ==========================================
 let selectedPhotoUrl = null;
 
@@ -432,9 +428,8 @@ function setupAssignmentScreen() {
     showScreen('assignment-screen');
     const picker = document.getElementById('picker-gallery');
     picker.innerHTML = '';
-    selectedPhotoUrl = null; // Reset pilihan
+    selectedPhotoUrl = null; 
     
-    // Render Foto
     session.photos.forEach(photoUrl => {
         const img = document.createElement('img');
         img.src = photoUrl;
@@ -446,7 +441,6 @@ function setupAssignmentScreen() {
         picker.appendChild(img);
     });
 
-    // Render Frame & Slots
     const frameImg = document.getElementById('assign-frame-img');
     const slotsContainer = document.getElementById('assign-slots-container');
     
@@ -496,13 +490,11 @@ document.getElementById('btn-generate').addEventListener('click', () => {
     canvas.height = tpl.canvasHeight;
     const ctx = canvas.getContext('2d');
     
-    // Background putih
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     let loadedCount = 0;
     
-    // Gambar foto (Center Crop Logic)
     tpl.slots.forEach((slot, i) => {
         const img = new Image();
         img.onload = () => {
@@ -551,13 +543,11 @@ document.getElementById('btn-download').addEventListener('click', () => {
     const dataURL = canvas.toDataURL("image/png");
     const filename = "Photobooth_" + Date.now() + ".png";
 
-    // 1. Download Lokal ke Tablet (sebagai backup admin)
     const link = document.createElement('a');
     link.download = filename;
     link.href = dataURL;
     link.click();
 
-    // 2. Proses Upload dan Generate QR
     if(adminSettings.driveUploadUrl) {
         const btn = document.getElementById('btn-download');
         const qrContainer = document.getElementById('qr-container');
@@ -567,7 +557,6 @@ document.getElementById('btn-download').addEventListener('click', () => {
         btn.innerText = "UPLOADING...";
         btn.disabled = true;
         
-        // Tampilkan kotak QR dengan status loading
         qrContainer.classList.remove('hidden');
         qrImage.style.display = 'none';
         qrText.innerText = "⏳ Sedang mengupload foto...";
@@ -581,18 +570,15 @@ document.getElementById('btn-download').addEventListener('click', () => {
                 image: base64Data
             })
         })
-        .then(response => response.json()) // BACA RESPON SEBAGAI JSON
+        .then(response => response.json()) 
         .then(result => {
             if(result.status === "success" && result.url) {
-                // Gunakan API publik untuk mengubah URL Drive menjadi Gambar QR Code
                 const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(result.url)}`;
-                
                 qrImage.src = qrApiUrl;
                 qrImage.onload = () => {
                     qrImage.style.display = 'block';
                     qrText.innerText = "✅ Scan menggunakan kamera HP!";
                 };
-                
                 btn.innerText = "UPLOAD SELESAI";
             } else {
                 throw new Error("Gagal mendapatkan link dari Google Drive.");
@@ -608,29 +594,22 @@ document.getElementById('btn-download').addEventListener('click', () => {
         alert("Upload gagal: Google Drive URL belum diatur di Admin Panel.");
     }
 });
+
 // ==========================================
 // 11. KEMBALI KE HOME (NEW SESSION)
 // ==========================================
 document.getElementById('btn-home').addEventListener('click', () => {
-    // 1. Kosongkan memori foto sesi sebelumnya
     session.photos = [];
     session.slotsAssigned = [];
     session.template = null;
 
-    // 2. Bersihkan Gallery UI
     document.getElementById('session-gallery').innerHTML = '';
     document.getElementById('picker-gallery').innerHTML = '';
     
-    // 3. Reset Kotak QR Code ke kondisi awal
     const qrContainer = document.getElementById('qr-container');
     const qrImage = document.getElementById('qr-image');
     const qrText = document.getElementById('qr-status-text');
     const btnDownload = document.getElementById('btn-download');
-    
-    qrContainer.classList.add('hidden');
-    qrImage.style.display = 'none';
-    qrImage.src = '';
-    qrText.innerText = "Menunggu proses...";
     
     if(qrContainer) {
         qrContainer.classList.add('hidden');
@@ -644,6 +623,5 @@ document.getElementById('btn-home').addEventListener('click', () => {
         btnDownload.disabled = false;
     }
 
-    // 4. Kembali ke halaman utama
     showScreen('start-screen');
 });
