@@ -122,11 +122,11 @@ select { padding: 12px 20px; font-size: 1.2rem; border-radius: 10px; border: 1px
 }
 
 #timer { 
-    font-size: 3.5rem; /* Ukuran Super Besar */
+    font-size: 2rem; 
     font-weight: 800; 
     background: rgba(255, 255, 255, 0.95); 
-    padding: 5px 30px; 
-    border-radius: 50px; 
+    padding: 5px 20px; 
+    border-radius: 20px; 
     box-shadow: 0 5px 20px rgba(0,0,0,0.2); 
     color: var(--danger); 
     letter-spacing: 2px; 
