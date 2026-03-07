@@ -134,14 +134,14 @@ select { padding: 12px 20px; font-size: 1.2rem; border-radius: 10px; border: 1px
 
 .camera-container { 
     position: relative; 
-    width: 80%; 
-    max-width: 800px; 
-    height: 55vh; /* Membatasi tinggi agar tidak mendesak tombol */
+    width: 90%; 
+    max-width: 1000px; 
+    height: 65vh; /* Membatasi tinggi agar tidak mendesak tombol */
     background: black; 
     border-radius: 20px; 
     overflow: hidden; 
     box-shadow: 0 10px 30px rgba(0,0,0,0.2); 
-    margin-top: 60px; /* Memberi ruang untuk timer di atas */
+    margin-top: 40px; /* Memberi ruang untuk timer di atas */
 }
 
 video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
