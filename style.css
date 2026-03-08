@@ -303,3 +303,13 @@ video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
     flex-wrap: wrap; 
     justify-content: center; 
 }
+
+/* ========================================== */
+/* PAKSAAN BORDER TOMBOL SELESAI              */
+/* ========================================== */
+#btn-home {
+    background-color: #4A4A4A !important; /* Warna gelap */
+    color: #FFFFFF !important; /* Teks putih */
+    border: 4px solid #FFD1DC !important; /* GARIS PINGGIR PINK TEBAL */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important; /* Bayangan */
+}
