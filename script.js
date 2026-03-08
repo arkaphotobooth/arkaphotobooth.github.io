@@ -338,7 +338,13 @@ document.getElementById('btn-start').addEventListener('click', async () => {
     showScreen('session-screen');
     
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+       const stream = await navigator.mediaDevices.getUserMedia({ 
+    video: { 
+        facingMode: "user",
+        width: { ideal: 1920 },
+        height: { ideal: 1080 } 
+    } 
+});
         video.srcObject = stream;
         
         session.timer = setInterval(() => {
