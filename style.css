@@ -55,8 +55,12 @@ button:active { transform: scale(0.95); }
 .primary { background: var(--soft-pink); color: var(--dark); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
 .secondary { background: var(--white); border: 2px solid var(--soft-pink); color: var(--dark); }
 .danger { background: var(--danger); color: white; }
-.dark { background: var(--dark); color: white; }
-
+.dark { 
+    background: var(--dark); 
+    color: white; 
+    border: 3px solid var(--soft-pink); /* INI TAMBAHANNYA: Memberikan garis pinggir warna pink setebal 3px */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2); /* Sedikit bayangan agar tombol lebih menonjol */
+}
 .subtle-btn { 
     position: absolute; 
     top: 20px; 
