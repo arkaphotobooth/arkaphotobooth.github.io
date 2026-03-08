@@ -109,7 +109,7 @@ select { padding: 12px 20px; font-size: 1.2rem; border-radius: 10px; border: 1px
     top: 0; left: 0; right: 0; bottom: 0;
     
     /* Angka 0.6 adalah tingkat transparansi putih (0.0 sampai 1.0) */
-    background: rgba(255, 255, 255, 0.6); 
+    background: rgba(255, 255, 255, 1.0); 
     
     /* Gunakan baris di bawah ini jika ingin overlay warna HITAM (hapus baris putih di atas) */
     /* background: rgba(0, 0, 0, 0.5); */
