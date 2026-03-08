@@ -87,6 +87,37 @@ input {
 select { padding: 12px 20px; font-size: 1.2rem; border-radius: 10px; border: 1px solid #ccc; width: 100%; max-width: 400px; outline: none;}
 
 /* ========================================== */
+/* WALLPAPER LAYAR AWAL                       */
+/* ========================================== */
+#start-screen {
+    /* GANTI 'background.gif' DENGAN NAMA FILE ANDA */
+    background-image: url('background.gif'); 
+    background-size: cover; /* Membuat gambar memenuhi seluruh layar */
+    background-position: center; /* Memastikan posisi gambar di tengah */
+    background-repeat: no-repeat;
+    
+    /* Mencegah wallpaper terpotong */
+    position: relative; 
+    z-index: 1;
+}
+
+/* (OPSIONAL) Efek Kaca Transparan / Overlay */
+/* Agar teks "PHOTO BOOTH" tetap terbaca jelas jika gambar belakangnya terlalu ramai */
+#start-screen::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    
+    /* Angka 0.6 adalah tingkat transparansi putih (0.0 sampai 1.0) */
+    background: rgba(255, 255, 255, 0.6); 
+    
+    /* Gunakan baris di bawah ini jika ingin overlay warna HITAM (hapus baris putih di atas) */
+    /* background: rgba(0, 0, 0, 0.5); */
+    
+    z-index: -1;
+}
+
+/* ========================================== */
 /* ADMIN PANEL                                */
 /* ========================================== */
 .admin-header { display: flex; justify-content: space-between; align-items: center; width: 95%; max-width: 1200px; margin-bottom: 20px; }
