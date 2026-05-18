@@ -18,7 +18,7 @@ let session = {
     timer: null,
     timeLeft: 300 
 };
-
+let imageCapture = null;
 // ==========================================
 // 2. DOM ELEMENTS & UTILS
 // ==========================================
@@ -338,15 +338,28 @@ document.getElementById('btn-start').addEventListener('click', async () => {
     showScreen('session-screen');
     
     try {
-       const stream = await navigator.mediaDevices.getUserMedia({ 
-    video: { 
-        facingMode: "user",
-        width: { ideal: 1920 },
-        height: { ideal: 1080 } 
-    } 
-});
+        // 1. Viewfinder diatur ke 720p agar ringan
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: "user",
+                width: { ideal: 1280 },
+                height: { ideal: 720 } 
+            } 
+        });
         video.srcObject = stream;
         
+        // 2. Ekstrak track video untuk ImageCapture API
+        const track = stream.getVideoTracks()[0];
+        
+        // 3. Cek dukungan browser untuk ImageCapture
+        if ('ImageCapture' in window) {
+            imageCapture = new ImageCapture(track);
+            console.log("Hybrid Engine Active: ImageCapture didukung!");
+        } else {
+            imageCapture = null;
+            console.warn("ImageCapture tidak didukung. Menggunakan Fallback (Screenshot).");
+        }
+
         session.timer = setInterval(() => {
             session.timeLeft--;
             updateTimerDisplay();
@@ -385,27 +398,78 @@ document.getElementById('btn-take-photo').addEventListener('click', () => {
     }, 1000);
 });
 
-function snapPhoto() {
+async function snapPhoto() { // Tambahkan 'async' di sini
     audioShutter.play().catch(e => console.log('Audio error:', e));
     
+    // Efek flash kamera
     countdownOverlay.style.background = 'white';
     setTimeout(() => { countdownOverlay.style.background = 'transparent'; }, 100);
 
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    
-    ctx.translate(canvas.width, 0);
-    ctx.scale(-1, 1);
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    const dataUrl = canvas.toDataURL('image/jpeg');
-    session.photos.push(dataUrl);
-    
-    const img = document.createElement('img');
-    img.src = dataUrl;
-    document.getElementById('session-gallery').appendChild(img);
+    try {
+        let finalDataUrl = "";
+
+        if (imageCapture) {
+            // ==========================================
+            // MODE A: HYBRID ENGINE (NATIVE HI-RES)
+            // ==========================================
+            const blob = await imageCapture.takePhoto();
+            const imageBitmap = await createImageBitmap(blob);
+
+            // Batasi ukuran maksimal (Downscale) agar RAM aman saat proses Photostrip
+            // Resolusi 1920px sudah sangat tajam untuk cetak photobooth
+            const MAX_WIDTH = 1920; 
+            let width = imageBitmap.width;
+            let height = imageBitmap.height;
+
+            if (width > MAX_WIDTH) {
+                height = Math.round((height * MAX_WIDTH) / width);
+                width = MAX_WIDTH;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            
+            // Mirroring (karena kamera depan biasanya terbalik)
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            
+            // Gambar bitmap ke canvas untuk resizing
+            ctx.drawImage(imageBitmap, 0, 0, width, height);
+            
+            finalDataUrl = canvas.toDataURL('image/jpeg', 0.9); // Kualitas JPEG 90%
+            
+            // PENTING: Bebaskan memori raksasa dari ImageBitmap
+            imageBitmap.close(); 
+            
+        } else {
+            // ==========================================
+            // MODE B: FALLBACK (SCREENSHOT VIDEO)
+            // ==========================================
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            finalDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        }
+
+        // Simpan dan tampilkan ke galeri
+        session.photos.push(finalDataUrl);
+        
+        const img = document.createElement('img');
+        img.src = finalDataUrl;
+        document.getElementById('session-gallery').appendChild(img);
+
+    } catch (error) {
+        console.error("Gagal mengambil foto:", error);
+        alert("Terjadi kesalahan saat menangkap gambar.");
+    }
 }
 
 document.getElementById('btn-end-session').addEventListener('click', endSession);
