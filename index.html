@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  
-    <title>Professional Web Photobooth</title>   
+
+    <title>Professional Web Photobooth</title>
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -12,20 +13,77 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-    <div id="start-screen" class="screen active">
-        <button id="btn-admin-login" class="btn-small subtle-btn">⚙️ Admin Panel</button>
-        <div class="hero">
-            <h1 class="title">PHOTO BOOTH</h1>
-            <p class="subtitle">Capture Your Moment</p>
-            
-            <div class="template-selector">
-                <label for="template-select">Choose Frame:</label>
-                <select id="template-select"></select>
+    <div id="standby-screen" class="screen active" onclick="showScreen('payment-screen')">
+        <button id="btn-admin-login" class="subtle-btn" style="z-index: 100;">⚙️ Admin Panel</button>
+
+        <div class="hero" style="text-align: center; cursor: pointer; margin-top: -50px;">
+            <h1 class="title" style="text-shadow: 2px 4px 10px rgba(0,0,0,0.1);">PHOTO BOOTH</h1>
+            <p class="subtitle" style="color: var(--dark); font-weight: 600;">Tap Anywhere to Start</p>
+        </div>
+    </div>
+
+    <div id="payment-screen" class="screen">
+        <div class="glass-panel"
+            style="text-align: center; max-width: 500px; width: 90%; padding: 40px; border-radius: 20px;">
+            <h2 style="font-size: 2rem; margin-bottom: 10px; color: var(--soft-pink);">Pembayaran</h2>
+            <p style="margin-bottom: 30px; color: var(--dark);">Silakan selesaikan pembayaran untuk memulai sesi foto
+                Anda.</p>
+
+            <div
+                style="background: white; padding: 20px; border-radius: 15px; margin: 0 auto 30px auto; width: 250px; height: 250px; display: flex; align-items: center; justify-content: center; border: 4px dashed #ccc;">
+                <span style="color: #888; font-weight: bold;">[ Mockup QRIS ]</span>
             </div>
 
-            <button id="btn-start" class="btn-large primary">START SESSION</button>
+            <button id="btn-mock-pay" class="btn-large primary" style="width: 100%; margin-bottom: 15px;">SIMULASI BAYAR
+                BERHASIL</button>
+            <button onclick="showScreen('standby-screen')" class="btn-small secondary"
+                style="border-radius: 50px;">Batal</button>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 3. FRAME CAROUSEL SCREEN                   -->
+    <!-- ========================================== -->
+    <div id="carousel-screen" class="screen">
+        <!-- Panel Kaca Induk (Relative agar tombol bisa melayang di dalamnya) -->
+        <div class="glass-panel"
+            style="width: 95%; max-width: 1400px; height: 95vh; position: relative; display: flex; flex-direction: column; padding: 25px 0 40px 0; border-radius: 30px; overflow: hidden;">
+            <!-- BAGIAN ATAS: Teks (Diberi z-index agar selalu di atas carousel) -->
+            <div style="padding: 0 60px; flex-shrink: 0; position: relative; z-index: 20;">
+                <h2
+                    style="font-family: 'Playfair Display', serif; color: var(--dark); font-size: 3.2rem; font-weight: 800; margin-bottom: 10px; line-height: 1.1; letter-spacing: -1px;">
+                    Ready, Set, Pose!</h2>
+                <p style="color: #555; font-size: 1.1rem; font-weight: 500; line-height: 1.5; max-width: 500px;">Pilih
+                    template favoritmu, siapkan gaya paling seru, dan biarkan kami mengabadikan momenmu.</p>
+            </div>
+
+            <!-- BAGIAN TENGAH-BAWAH: Carousel dibiarkan meluas -->
+            <div id="customer-layout-container" class="carousel-container"
+                style="flex: 1; width: 100%; display: flex; align-items: center; position: relative; z-index: 10;">
+                <!-- Kartu di-generate oleh JavaScript di sini -->
+            </div>
+
+            <!-- TOMBOL MENGAMBANG DI KANAN BAWAH -->
+            <button id="btn-start-session" class="btn-large primary"
+                style="position: absolute; bottom: 30px; right: 30px; z-index: 50; box-shadow: 0 15px 35px rgba(255, 209, 220, 0.9); font-size: 1.2rem; padding: 18px 40px; border-radius: 50px;">PILIH
+                FRAME INI</button>
+
+        </div>
+    </div>
+
+    <div id="carousel-screen" class="screen">
+        <div class="glass-panel" style="margin-bottom: 20px; padding: 15px 40px;">
+            <h2>Pilih Frame Anda</h2>
+        </div>
+
+        <div id="customer-layout-container" class="carousel-container">
+        </div>
+
+        <div class="glass-panel" style="margin-top: 20px; padding: 15px;">
+            <button id="btn-start-session" class="btn-large primary">PILIH FRAME INI</button>
         </div>
     </div>
 
@@ -34,27 +92,28 @@
             <h2>Admin Dashboard</h2>
             <button id="btn-admin-close" class="btn-small">Back to Home</button>
         </div>
-        
+
         <div class="admin-layout">
             <details class="admin-settings-accordion">
                 <summary>⚙️ System Settings (Google Drive, GitHub, Timer) - <i>Klik untuk Expand</i></summary>
                 <div class="admin-panel accordion-content">
-                    
+
                     <label>Waktu Sesi Foto (dalam Detik) - Default: 300 detik (5 Menit)</label>
                     <input type="number" id="session-time" placeholder="300" min="10">
-                    
+
                     <hr style="margin: 15px 0; border: 0; border-top: 1px solid #ddd;">
-                    
+
                     <label>Google Drive Upload URL</label>
                     <input type="text" id="drive-url" placeholder="https://script.google.com/macros/s/.../exec">
-                    
+
                     <label>GitHub "Username/Repo" (Misal: budi/photobooth)</label>
                     <input type="text" id="github-repo" placeholder="username/repository">
-                    
+
                     <label>GitHub Personal Access Token (PAT)</label>
                     <input type="password" id="github-token" placeholder="ghp_xxxxxxxxxxxxxxxxx">
-                    
-                    <button id="btn-save-settings" class="btn-small primary" style="margin-top: 10px;">Save All Settings</button>
+
+                    <button id="btn-save-settings" class="btn-small primary" style="margin-top: 10px;">Save All
+                        Settings</button>
                 </div>
             </details>
 
@@ -64,14 +123,15 @@
                     <input type="text" id="tpl-name" placeholder="Template Name (e.g., Wedding Frame)">
                     <input type="file" id="tpl-file" accept="image/png">
                 </div>
-                <p class="help-text">1. Upload Frame PNG (Transparan) | 2. Sentuh & Tarik (Drag) di atas gambar untuk membuat Slot Foto.</p>
-                
+                <p class="help-text">1. Upload Frame PNG (Transparan) | 2. Sentuh & Tarik (Drag) di atas gambar untuk
+                    membuat Slot Foto.</p>
+
                 <div class="canvas-container" id="admin-canvas-container">
                     <canvas id="admin-canvas"></canvas>
                 </div>
-                
+
                 <ul id="slot-list" class="horizontal-list"></ul>
-                
+
                 <div class="admin-actions">
                     <button id="btn-save-tpl" class="btn-large primary">Save & Push Template</button>
                     <button id="btn-reset-tpl" class="btn-small danger">Reset All Templates</button>
@@ -85,18 +145,18 @@
             <div id="timer">05:00</div>
             <button id="btn-end-session" class="btn-small danger">End Early</button>
         </div>
-               
+
         <div class="camera-container">
             <video id="camera-feed" autoplay playsinline></video>
             <div id="countdown-overlay"></div>
         </div>
-        
+
         <div class="session-bottom-bar">
             <button id="btn-take-photo" class="btn-large primary">📸 TAKE PHOTO</button>
             <div class="gallery-strip" id="session-gallery">
-                </div>
+            </div>
         </div>
-        </div>
+    </div>
 
     <div id="assignment-screen" class="screen">
         <div class="assignment-header">
@@ -105,7 +165,7 @@
         </div>
         <div class="assignment-layout">
             <div class="photo-picker" id="picker-gallery">
-                </div>
+            </div>
             <div class="frame-preview-container">
                 <div id="assignment-frame">
                     <img id="assign-frame-img" src="" alt="Frame">
@@ -118,27 +178,28 @@
         </div>
     </div>
 
-   <div id="preview-screen" class="screen">
+    <div id="preview-screen" class="screen">
         <h2>Your Photostrip</h2>
-        
+
         <div class="preview-layout">
             <div class="preview-container">
                 <canvas id="final-canvas"></canvas>
             </div>
-            
+
             <div id="qr-container" class="qr-box hidden">
                 <h3>Scan to Download</h3>
                 <img id="qr-image" src="" alt="QR Code" style="display: none;">
                 <p id="qr-status-text">Menunggu proses...</p>
             </div>
         </div>
-        
-       <div class="controls action-buttons">
+
+        <div class="controls action-buttons">
             <button id="btn-retake" class="btn-large secondary">Retake All</button>
             <button id="btn-download" class="btn-large primary">UPLOAD & GET QR</button>
-            
+
             <button id="btn-home" class="btn-large">SELESAI</button>
 
-    <script src="script.js"></script>
+            <script src="script.js"></script>
 </body>
+
 </html>
