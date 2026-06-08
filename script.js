@@ -395,109 +395,195 @@ function resetAdminForm() {
 }
 
 // ==========================================
-// 7. USER SESSION: KAMERA & TIMER
+// 7. USER SESSION: HYBRID ENGINE + COUNTDOWN
 // ==========================================
+let isCameraReady = false;
+const MAX_TAKES = 6;
+let currentTake = 1;
+let webCameraStream = null; // Variabel untuk fallback web
+let imageCaptureAPI = null;
+
+// 1. TRIGGER DARI CAROUSEL SCREEN
 document.getElementById('btn-start-session').addEventListener('click', async () => {
-    // Ambil index dari radar carousel
     session.template = templates[selectedTemplateIndex];
     session.photos = [];
     session.slotsAssigned = new Array(session.template.slots.length).fill(null);
 
-    // MENGAMBIL WAKTU DARI SETTING ADMIN
-    session.timeLeft = adminSettings.sessionTime;
-
-    document.getElementById('session-gallery').innerHTML = '';
-    updateTimerDisplay();
-
     showScreen('session-screen');
+    startNativeHybridCamera();
+});
+
+// 2. INISIALISASI KAMERA & PEMANASAN
+async function startNativeHybridCamera() {
+    const curtain = document.getElementById('camera-curtain');
+    const gallery = document.getElementById('thumbnail-gallery');
+    const indicator = document.getElementById('btn-finish-session');
+    const btnSnap = document.getElementById('btn-snap');
+    const videoFallback = document.getElementById('camera-feed');
+
+    curtain.classList.remove('hidden');
+    gallery.innerHTML = '';
+    currentTake = 1;
+    indicator.innerText = `Take 1 / ${MAX_TAKES}`;
+    btnSnap.disabled = false;
+    btnSnap.style.opacity = '1';
+    isCameraReady = false;
 
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                facingMode: "user",
-                width: { ideal: 1920 },
-                height: { ideal: 1080 }
-            }
+        // [FALLBACK WEB] Nyalakan kamera Chrome agar bisa ditest
+        webCameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "user", width: { ideal: 1920 }, height: { ideal: 1080 } }
         });
-        video.srcObject = stream;
+        videoFallback.srcObject = webCameraStream;
 
-        session.timer = setInterval(() => {
-            session.timeLeft--;
-            updateTimerDisplay();
-            if (session.timeLeft <= 0) {
-                endSession();
+        // Siapkan API Kamera High-Res jika didukung
+        const track = webCameraStream.getVideoTracks()[0];
+        if ('ImageCapture' in window) {
+            imageCaptureAPI = new ImageCapture(track);
+        }
+
+        // PEMANASAN SENSOR: Jeda 1.5 detik
+        setTimeout(async () => {
+            if (imageCaptureAPI) {
+                try { await imageCaptureAPI.takePhoto(); }
+                catch (err) { console.log("Dummy capture skipped"); }
+            }
+            isCameraReady = true;
+            curtain.classList.add('hidden'); // Buka Tirai!
+        }, 1500);
+
+    } catch (error) {
+        alert("Gagal menyalakan kamera. Pastikan izin kamera diberikan.");
+        showScreen('carousel-screen');
+    }
+}
+
+// 3. FUNGSI HITUNG MUNDUR (PROMISE)
+function doCountdown(seconds) {
+    return new Promise(resolve => {
+        let count = seconds;
+        const overlay = document.getElementById('countdown-overlay');
+        overlay.innerText = count;
+
+        const cInt = setInterval(() => {
+            count--;
+            if (count > 0) {
+                overlay.innerText = count;
+            } else {
+                clearInterval(cInt);
+                overlay.innerText = ''; // Hilangkan angka
+                resolve();
             }
         }, 1000);
-    } catch (err) {
-        alert("Akses kamera ditolak atau tidak tersedia.");
-        showScreen('start-screen');
-    }
-});
-
-function updateTimerDisplay() {
-    const m = Math.floor(session.timeLeft / 60).toString().padStart(2, '0');
-    const s = (session.timeLeft % 60).toString().padStart(2, '0');
-    document.getElementById('timer').innerText = `${m}:${s}`;
+    });
 }
 
-document.getElementById('btn-take-photo').addEventListener('click', () => {
-    const btn = document.getElementById('btn-take-photo');
-    btn.disabled = true;
-    let count = 3;
-    countdownOverlay.innerText = count;
+// 4. TOMBOL SNAP (AUTO LOOP SEQUENCE 6x)
+document.getElementById('btn-snap').addEventListener('click', async () => {
+    if (!isCameraReady) return;
 
-    const cInt = setInterval(() => {
-        count--;
-        if (count > 0) {
-            countdownOverlay.innerText = count;
-        } else {
-            clearInterval(cInt);
-            countdownOverlay.innerText = '';
-            snapPhoto();
-            btn.disabled = false;
+    const btnSnap = document.getElementById('btn-snap');
+    btnSnap.disabled = true;
+    btnSnap.style.opacity = '0.5';
+
+    // Looping 6 kali jepretan
+    for (let i = currentTake; i <= MAX_TAKES; i++) {
+        currentTake = i;
+
+        // ==========================================
+        // 1. DI DALAM LOOP FOR: Ganti 'take-indicator' menjadi 'btn-finish-session'
+        // ==========================================
+        document.getElementById('btn-finish-session').innerText = `Take ${currentTake} / ${MAX_TAKES}`;
+
+        // KUNCI PERBAIKAN: Hitung mundur 3 detik sebelum setiap jepretan
+        await doCountdown(3);
+
+        // Kilat Flash Layar
+        const screenBg = document.getElementById('session-screen');
+        screenBg.style.backgroundColor = 'rgba(255,255,255,0.9)';
+        audioShutter.play().catch(e => console.log('Audio error:', e));
+        setTimeout(() => { screenBg.style.backgroundColor = 'transparent'; }, 100);
+
+        try {
+            let finalBase64 = "";
+
+            // Tangkap Gambar Resolusi Tinggi via Web API
+            if (imageCaptureAPI) {
+                const blob = await imageCaptureAPI.takePhoto();
+                const imageBitmap = await createImageBitmap(blob);
+
+                const canvas = document.createElement('canvas');
+                canvas.width = imageBitmap.width;
+                canvas.height = imageBitmap.height;
+                const ctx = canvas.getContext('2d');
+
+                // Mirroring
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+                ctx.drawImage(imageBitmap, 0, 0);
+
+                finalBase64 = canvas.toDataURL('image/jpeg', 0.95);
+                imageBitmap.close(); // Bersihkan RAM
+            } else {
+                // Fallback jika API tidak didukung
+                const video = document.getElementById('camera-feed');
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                finalBase64 = canvas.toDataURL('image/jpeg', 0.9);
+            }
+
+            session.photos.push(finalBase64);
+
+            // Update UI Gallery Kiri
+            const img = document.createElement('img');
+            img.src = finalBase64;
+            img.className = 'gallery-thumb';
+            document.getElementById('thumbnail-gallery').appendChild(img);
+
+        } catch (err) {
+            console.error("Gagal menjepret:", err);
         }
-    }, 1000);
+
+        // Jeda santai 1 detik setelah jepretan sebelum hitung mundur selanjutnya
+        if (i < MAX_TAKES) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    } // <-- INI ADALAH PENUTUP LOOP FOR
+
+    // ==========================================
+    // 2. SETELAH LOOP SELESAI: Ubah teks tombol menjadi LANJUT
+    // ==========================================
+    document.getElementById('btn-finish-session').innerText = "LANJUT ➔";
+
 });
 
-function snapPhoto() {
-    audioShutter.play().catch(e => console.log('Audio error:', e));
-
-    countdownOverlay.style.background = 'white';
-    setTimeout(() => { countdownOverlay.style.background = 'transparent'; }, 100);
-
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-
-    ctx.translate(canvas.width, 0);
-    ctx.scale(-1, 1);
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    const dataUrl = canvas.toDataURL('image/jpeg');
-    session.photos.push(dataUrl);
-
-    const img = document.createElement('img');
-    img.src = dataUrl;
-    document.getElementById('session-gallery').appendChild(img);
-}
-
-document.getElementById('btn-end-session').addEventListener('click', endSession);
-
-function endSession() {
-    clearInterval(session.timer);
-    const stream = video.srcObject;
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+// 5. TOMBOL SELESAI / LANJUT (KANAN ATAS)
+document.getElementById('btn-finish-session').addEventListener('click', () => {
+    // Hanya bisa ditekan jika sudah ada minimal 1 foto yang dijepret
+    if (session.photos.length > 0) {
+        // Matikan Kamera
+        if (webCameraStream) {
+            webCameraStream.getTracks().forEach(t => t.stop());
+        }
+        // Lanjut ke layar pilih foto
+        setupAssignmentScreen();
+    } else {
+        alert("Silakan ambil foto terlebih dahulu!");
     }
+});
 
-    if (session.photos.length === 0) {
-        alert("Kamu belum mengambil foto satupun!");
-        showScreen('start-screen');
-        return;
+// 6. TOMBOL BATAL (KIRI ATAS)
+document.getElementById('btn-cancel').addEventListener('click', () => {
+    if (webCameraStream) {
+        webCameraStream.getTracks().forEach(t => t.stop());
     }
-    setupAssignmentScreen();
-}
+    showScreen('carousel-screen');
+});
 
 // ==========================================
 // 8. USER SESSION: ASSIGNMENT

@@ -74,19 +74,6 @@
         </div>
     </div>
 
-    <div id="carousel-screen" class="screen">
-        <div class="glass-panel" style="margin-bottom: 20px; padding: 15px 40px;">
-            <h2>Pilih Frame Anda</h2>
-        </div>
-
-        <div id="customer-layout-container" class="carousel-container">
-        </div>
-
-        <div class="glass-panel" style="margin-top: 20px; padding: 15px;">
-            <button id="btn-start-session" class="btn-large primary">PILIH FRAME INI</button>
-        </div>
-    </div>
-
     <div id="admin-screen" class="screen">
         <div class="admin-header" style="width: 95%; max-width: 1200px;">
             <h2>Admin Dashboard</h2>
@@ -140,41 +127,66 @@
         </div>
     </div>
 
-    <div id="session-screen" class="screen">
-        <div class="session-header">
-            <div id="timer">05:00</div>
-            <button id="btn-end-session" class="btn-small danger">End Early</button>
+    <!-- ========================================== -->
+    <!-- SESSION SCREEN (HYBRID NATIVE CAMERA)      -->
+    <!-- ========================================== -->
+    <div id="session-screen" class="screen transparent-bg">
+
+        <video id="camera-feed" class="camera-fallback" autoplay playsinline></video>
+
+        <div id="countdown-overlay"></div>
+
+        <div id="camera-curtain" class="curtain">
+            <h2 class="curtain-text">Menyiapkan Lensa... ✨</h2>
         </div>
 
-        <div class="camera-container">
-            <video id="camera-feed" autoplay playsinline></video>
-            <div id="countdown-overlay"></div>
-        </div>
+        <button id="btn-cancel" class="glass-circle pos-top-left">✖</button>
 
-        <div class="session-bottom-bar">
-            <button id="btn-take-photo" class="btn-large primary">📸 TAKE PHOTO</button>
-            <div class="gallery-strip" id="session-gallery">
-            </div>
-        </div>
+        <!-- PERBAIKAN: ID diubah menjadi btn-finish-session agar dibaca oleh JS -->
+        <button id="btn-finish-session" class="glass-badge pos-top-right">Take 1 / 6</button>
+
+        <div id="thumbnail-gallery" class="gallery-container pos-left-mid"></div>
+
+        <!-- PERBAIKAN: Emoji dihapus agar bentuk cincin kamera terlihat elegan -->
+        <button id="btn-snap" class="snap-btn pos-right-mid"></button>
+
     </div>
 
     <div id="assignment-screen" class="screen">
-        <div class="assignment-header">
-            <h2>Assign Your Photos</h2>
-            <p>Sentuh foto di sebelah kiri, lalu sentuh slot kosong di sebelah kanan.</p>
+        <!-- Header -->
+        <div class="assignment-header" style="text-align: center; margin-bottom: 20px;">
+            <h2 style="font-family: 'Playfair Display', serif; color: var(--dark); font-size: 2.5rem;">Assign Your
+                Photos</h2>
+            <p style="color: #666;">Sentuh foto di sebelah kiri, lalu sentuh slot kosong di sebelah kanan.</p>
         </div>
-        <div class="assignment-layout">
-            <div class="photo-picker" id="picker-gallery">
+
+        <!-- Layout Utama: Menggunakan Glassmorphism -->
+        <div class="assignment-layout"
+            style="display: flex; gap: 20px; justify-content: center; align-items: flex-start; padding: 20px;">
+
+            <!-- Panel Kiri: Picker -->
+            <div class="glass-panel"
+                style="padding: 20px; border-radius: 30px; width: 45%; min-height: 500px; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center;">
+                <div class="photo-picker" id="picker-gallery"
+                    style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%;">
+                </div>
             </div>
-            <div class="frame-preview-container">
-                <div id="assignment-frame">
-                    <img id="assign-frame-img" src="" alt="Frame">
+
+            <!-- Panel Kanan: Frame Preview -->
+            <div class="glass-panel"
+                style="padding: 20px; border-radius: 30px; width: 45%; min-height: 500px; display: flex; justify-content: center; align-items: center;">
+                <div id="assignment-frame" style="position: relative;">
+                    <img id="assign-frame-img" src="" alt="Frame" style="max-height: 500px; border-radius: 10px;">
                     <div id="assign-slots-container"></div>
                 </div>
             </div>
         </div>
-        <div class="controls">
-            <button id="btn-generate" class="btn-large primary">GENERATE PHOTOSTRIP</button>
+
+        <!-- Tombol Generate -->
+        <div class="controls" style="text-align: center; padding: 20px;">
+            <button id="btn-generate" class="btn-large primary"
+                style="padding: 15px 50px; border-radius: 50px; font-size: 1.2rem; box-shadow: 0 10px 20px rgba(255, 209, 220, 0.6);">GENERATE
+                PHOTOSTRIP</button>
         </div>
     </div>
 
